@@ -73,8 +73,7 @@ def gen_poi_geoneighbor(dataset_name,  save_path=None):
 
       
         
-        
-
+    
 gen_poi_geoneighbor('NY')
 
     
