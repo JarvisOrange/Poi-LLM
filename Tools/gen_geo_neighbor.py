@@ -60,16 +60,13 @@ def gen_poi_geoneighbor(dataset_name,  save_path=None):
     poi_df['lat'] = poi_df['coordinates'].apply(lambda x: eval(x)[1])
     
     
-    
     geoneighbor_dict = {}
-    geoneighbor_category_dict = {}
     for _, row in tqdm(poi_df.iterrows()):
         poi_id = row['poi_id']
         lon, lat = row['lon'],  row['lat']
         minlon, maxlon, minlat, maxlat = cal_degree(lon, lat)
         poi_geoneighbor = get_geoneighbor(poi_df, poi_id, minlon, maxlon, minlat, maxlat)
         geoneighbor_dict['poi_id'] =  poi_geoneighbor['poi_id']
-        geoneighbor_category_dict['poi_id'] = poi_geoneighbor['category_name']
 
       
         
