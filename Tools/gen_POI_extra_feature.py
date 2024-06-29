@@ -1,5 +1,3 @@
-import torch
-from torch import einsum, nn
 import torch.nn.functional as F
 import numpy as np
 import pandas as pd
@@ -13,12 +11,22 @@ import itertools
 import math
 import random
 from random import choice
+import time
+import os
 
 
-dataset_path_dict = {
+
+dataset_traj_path_dict = {
     'NY':'./Dataset/Foursquare_NY/nyc.poitraj',
     'SG':'./Dataset/Foursquare_SG/singapore.poitraj',
     'TKY':'./Dataset/Foursquare_TKY/tky.poitraj',
+}
+
+
+dataset_geo_path_dict = {
+    'NY':'./Dataset/Foursquare_NY/nyc.geo',
+    'SG':'./Dataset/Foursquare_SG/singapore.geo',
+    'TKY':'./Dataset/Foursquare_TKY/tky.geo',
 }
 
 ### gen poi visit-time feature
@@ -60,8 +68,8 @@ def get_daytime(time):
 
 def gen_poi_time_feature(dataset_name,  save_path=None):
         
-    data_path = dataset_path_dict[dataset_name]
-    poi_df = pd.read_csv(data_path, sep=',', header=None)
+    data_path = dataset_traj_path_dict[dataset_name]
+    poi_df = pd.read_csv(data_path, sep=',', header=0)
 
     columns_standard = ["entity_id","location","time","type","dyna_id"]
     if dataset_name != 'TKY':
@@ -69,26 +77,33 @@ def gen_poi_time_feature(dataset_name,  save_path=None):
     else:
         poi_df.columns = ["dyna_id","type","time","entity_id","location"]
         poi_df = poi_df.loc[:, columns_standard]
-    
+
+
+    poi_time_feature_result = []
 
     location_group = poi_df.groupby("location")
+    
 
     for l_g in tqdm(location_group):
         locations = pd.DataFrame(l_g[1])
         if dataset_name == "TKY":
             locations['date'] = locations['time'].apply(lambda x: x.split('T')[0])
             locations['daytime'] = locations['time'].apply(lambda x: x.split('T')[1][:-1])
-  
+
         else:
             locations['date'] = locations['time'].apply(lambda x: x.split(' ')[0])
             locations['daytime'] = locations['time'].apply(lambda x: x.split(' ')[3])
-
+        
         locations['date'] = locations['date'].apply(get_weekday_weekend)
         locations['daytime'] = locations['daytime'].apply(get_daytime)
 
+        poi_id = locations.iloc[0, 1] # second column is 'location'
+       
         total = len(l_g[1])
+
         count_temp1 = {"weekday":0, "weekend":0}
         count_temp2 = {0:0, 1:0, 2:0, 3:0, 4:0}
+
         temp_dict = dict(locations['date'].value_counts())
         for k in temp_dict.keys():
             count_temp1[k] += count_temp1[k] + temp_dict[k]
@@ -97,16 +112,22 @@ def gen_poi_time_feature(dataset_name,  save_path=None):
         for k in temp_dict.keys():
             count_temp2[k] += count_temp2[k] + temp_dict[k]
 
-        locations['freq'] = total
+        day_feature = ("weekday"if count_temp1['weekday'] > count_temp1['weekend'] else "weekend")
+        hour_feature = max(count_temp2, key=lambda x: count_temp2[x])
 
-        locations['weekday'] = count_temp1['weekday'] 
-        locations['weekday'] = count_temp1['weekend'] 
 
-        locations['time_class_0'] = count_temp2[0] 
-        locations['time_class_1'] = count_temp2[1]
-        locations['time_class_2'] = count_temp2[2]
-        locations['time_class_3'] = count_temp2[3]
-        locations['time_class_4'] = count_temp2[4]
+        poi_time_feature_result.append([poi_id, total, day_feature, hour_feature])
+
+    poi_time_feature_df = pd.DataFrame(poi_time_feature_result, columns=['geo_id','total_visit_time','day_feature','hour_feature'])
+
+    if not os.path.exists(save_path):
+            os.makedirs(save_path)
+    name = 'poi' + "_" + dataset_name + "_time.csv"
+    save_path_name = save_path  + name
+    poi_time_feature_df.to_csv(save_path_name, sep=',', index=False, header=True)
+      
+
+
 
         
 ### gen poi poi-nearby feature
@@ -115,7 +136,7 @@ def cal_degree(lon, lat, min_distance=0.05):
         dlon =  2 * math.asin(math.sin(min_distance/(2*r))/math.cos(lat * math.pi/180))
         dlon = dlon * 180 / math.pi
         dlat = min_distance / r * 180 / math.pi;	
-        minlat = lat- dlat
+        minlat = lat - dlat
         maxlat = lat + dlat
         minlon = lon - dlon
         maxlon = lon + dlon
@@ -130,7 +151,8 @@ def get_geoneighbor(poi_list, poi_id, minlon, maxlon, minlat, maxlat):
                             (poi_list['lat'] < maxlat)]
     return poi_geoneighbor
 
-def cal_poi_category(cat_dict):
+def cal_poi_category(poi_cat_df):
+    cat_dict = poi_cat_df.value_counts().to_dict()
     if len(cat_dict) == 0:
         return " "
     if len(cat_dict) < 3:
@@ -142,18 +164,18 @@ def cal_poi_category(cat_dict):
 
 def gen_poi_category_feature(dataset_name,  save_path=None):
 
-    data_path = dataset_path_dict[dataset_name]
+    data_path = dataset_geo_path_dict[dataset_name]
 
     columns_standard = ["poi_id","coordinates","category_name"]
     if dataset_name == 'TKY':
         columns_read = ['geo_id','coordinates','venue_category_name']
         poi_df = pd.read_csv(data_path, sep=',', header=0, usecols=['geo_id','coordinates','venue_category_name'])
     else:
-        columns_read = ['type','coordinates','poi_type','poi_id']
+        columns_read = ['geo_id','type','coordinates','poi_type']
         poi_df = pd.read_csv(data_path, sep=',', header=0, usecols=columns_read)
         poi_df = poi_df[poi_df['type']=='Point']
         poi_df = poi_df.drop(['type'], axis=1)
-        poi_df = poi_df.loc[:,['poi_id','coordinates','poi_type']]
+        poi_df = poi_df.loc[:,['geo_id','coordinates','poi_type']]
     poi_df.columns = columns_standard 
     poi_df['lon'] = poi_df['coordinates'].apply(lambda x: eval(x)[0])
     poi_df['lat'] = poi_df['coordinates'].apply(lambda x: eval(x)[1])
@@ -161,21 +183,35 @@ def gen_poi_category_feature(dataset_name,  save_path=None):
     
     
     geoneighbor_dict = {}
-    geoneighbor_category_dict = {}
+    poi_category_feature_result = []
     for _, row in tqdm(poi_df.iterrows()):
         poi_id = row['poi_id']
+        cat = row['category_name']
         lon, lat = row['lon'],  row['lat']
         minlon, maxlon, minlat, maxlat = cal_degree(lon, lat)
         poi_geoneighbor = get_geoneighbor(poi_df, poi_id, minlon, maxlon, minlat, maxlat)
         geoneighbor_dict['poi_id'] =  poi_geoneighbor['poi_id']
-        geoneighbor_category_dict['poi_id'] = poi_geoneighbor['category_name']
+        temp = cal_poi_category(poi_geoneighbor['category_name'])
 
-        poi_df['category_nearby'] = cal_poi_category(geoneighbor_category_dict['poi_id'])
+        poi_category_feature_result.append([poi_id, cat, temp])
+
+
+    poi_category_feature_df = pd.DataFrame(poi_category_feature_result, columns=['geo_id','category','category_nearby'])
+
+    if not os.path.exists(save_path):
+            os.makedirs(save_path)
+    name = 'poi' + "_" + dataset_name + "_cat_nearby.csv"
+    save_path_name = save_path  + name
+    poi_category_feature_df.to_csv(save_path_name, sep=',', index=False, header=True)
 
     
-        
-        
 
+
+
+dataset = 'NY'
+
+save_path = "./Feature/" + dataset + "/"
+gen_poi_category_feature(dataset, save_path= save_path)
 
 
 

@@ -39,6 +39,4 @@ def clean_poi_traj(dataset_name,  save_path=None):
 
 
 
-
-
 clean_poi_traj('SG')
