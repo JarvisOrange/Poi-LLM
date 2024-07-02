@@ -17,15 +17,15 @@ import os
 
 
 dataset_traj_path_dict = {
-    'NY':'./Dataset/Foursquare_NY/nyc.poitraj',
-    'SG':'./Dataset/Foursquare_SG/singapore.poitraj',
+    'NY':'./Dataset/Foursquare_NY/ny.poitraj',
+    'SG':'./Dataset/Foursquare_SG/sg.poitraj',
     'TKY':'./Dataset/Foursquare_TKY/tky.poitraj',
 }
 
 
 dataset_geo_path_dict = {
-    'NY':'./Dataset/Foursquare_NY/nyc.geo',
-    'SG':'./Dataset/Foursquare_SG/singapore.geo',
+    'NY':'./Dataset/Foursquare_NY/ny.geo',
+    'SG':'./Dataset/Foursquare_SG/sg.geo',
     'TKY':'./Dataset/Foursquare_TKY/tky.geo',
 }
 
@@ -47,24 +47,30 @@ def get_weekday_weekend(time):
 
 def get_daytime(time):
     '''
-    time class 0: 7:00:00-10:59:59
-    time class 1: 11:00:00-13:59:59
-    time class 2: 14:00:00-16:59:59
-    time class 3: 17:00:00-20:59:59
-    time class 4: 21:00:00-06:59:59
+    0: '6:00:00-8:59:59',
+    1: '9:00:00-10:59:59',
+    2: '11:00:00-12:59:59',
+    3: '13:00:00-16:59:59',
+    4: '17:00:00-18:59:59',
+    5: '19:00:00-23:59:59',
+    6: '00:00:00-5:59:59'
     '''
 
     time = datetime.strptime(time,"%H:%M:%S")
-    if time.hour >= 6 and time.hour < 11:
+    if time.hour >= 6 and time.hour < 9:
         return 0
-    elif time.hour >= 11 and time.hour < 14:
+    elif time.hour >= 9 and time.hour < 11:
         return 1
-    elif time.hour >= 14 and time.hour < 17:
+    elif time.hour >= 11 and time.hour < 13:
         return 2
-    elif time.hour >= 17 and time.hour < 21:
+    elif time.hour >= 13 and time.hour < 17:
         return 3
-    else:
+    elif time.hour >= 17 and time.hour < 19:
         return 4
+    elif time.hour >= 19 and time.hour < 24:
+        return 5
+    else:
+        return 6
 
 def gen_poi_time_feature(dataset_name,  save_path=None):
         
@@ -102,7 +108,7 @@ def gen_poi_time_feature(dataset_name,  save_path=None):
         total = len(l_g[1])
 
         count_temp1 = {"weekday":0, "weekend":0}
-        count_temp2 = {0:0, 1:0, 2:0, 3:0, 4:0}
+        count_temp2 = {0:0, 1:0, 2:0, 3:0, 4:0, 5:0, 6:0}
 
         temp_dict = dict(locations['date'].value_counts())
         for k in temp_dict.keys():
@@ -144,7 +150,7 @@ def cal_degree(lon, lat, min_distance=0.05):
 
 
 def get_geoneighbor(poi_list, poi_id, minlon, maxlon, minlat, maxlat):
-    poi_geoneighbor = poi_list[(poi_list['poi_id'] !=poi_id) &
+    poi_geoneighbor = poi_list[(poi_list['geo_id'] !=poi_id) &
                             (poi_list['lon'] > minlon) & 
                             (poi_list['lon'] < maxlon) & 
                             (poi_list['lat'] > minlat) & 
@@ -166,7 +172,7 @@ def gen_poi_category_feature(dataset_name,  save_path=None):
 
     data_path = dataset_geo_path_dict[dataset_name]
 
-    columns_standard = ["poi_id","coordinates","category_name"]
+    columns_standard = ["geo_id","coordinates","category"]
     if dataset_name == 'TKY':
         columns_read = ['geo_id','coordinates','venue_category_name']
         poi_df = pd.read_csv(data_path, sep=',', header=0, usecols=['geo_id','coordinates','venue_category_name'])
@@ -179,21 +185,23 @@ def gen_poi_category_feature(dataset_name,  save_path=None):
     poi_df.columns = columns_standard 
     poi_df['lon'] = poi_df['coordinates'].apply(lambda x: eval(x)[0])
     poi_df['lat'] = poi_df['coordinates'].apply(lambda x: eval(x)[1])
-    
+
+    first = poi_df.iloc[0,0]
+    poi_df['geo_id'] = poi_df['geo_id'].apply(lambda x: x - first)
     
     
     geoneighbor_dict = {}
     poi_category_feature_result = []
-    for _, row in tqdm(poi_df.iterrows()):
-        poi_id = row['poi_id']
-        cat = row['category_name']
+    for _, row in tqdm(poi_df.iterrows(), total=poi_df.shape[0]):
+        geo_id = row['geo_id']
+        cat = row['category']
         lon, lat = row['lon'],  row['lat']
         minlon, maxlon, minlat, maxlat = cal_degree(lon, lat)
-        poi_geoneighbor = get_geoneighbor(poi_df, poi_id, minlon, maxlon, minlat, maxlat)
-        geoneighbor_dict['poi_id'] =  poi_geoneighbor['poi_id']
-        temp = cal_poi_category(poi_geoneighbor['category_name'])
+        poi_geoneighbor = get_geoneighbor(poi_df, geo_id, minlon, maxlon, minlat, maxlat)
+        geoneighbor_dict['geo_id'] =  poi_geoneighbor['geo_id']
+        temp = cal_poi_category(poi_geoneighbor['category'])
 
-        poi_category_feature_result.append([poi_id, cat, temp])
+        poi_category_feature_result.append([geo_id, cat, temp])
 
 
     poi_category_feature_df = pd.DataFrame(poi_category_feature_result, columns=['geo_id','category','category_nearby'])
@@ -208,10 +216,12 @@ def gen_poi_category_feature(dataset_name,  save_path=None):
 
 
 
-dataset = 'NY'
 
-save_path = "./Feature/" + dataset + "/"
-gen_poi_category_feature(dataset, save_path= save_path)
+# gen_poi_category_feature(dataset, save_path= save_path)
+
+for dataset in ['NY','SG','TKY']:
+    save_path = "./Feature/" + dataset + "/"
+    gen_poi_category_feature(dataset, save_path = save_path)
 
 
 

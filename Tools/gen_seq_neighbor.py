@@ -16,8 +16,8 @@ from random import choice
 
 
 dataset_path_dict = {
-    'NY':'./Dataset/Foursquare_NY/nyc.poitraj',
-    'SG':'./Dataset/Foursquare_SG/singapore.poitraj',
+    'NY':'./Dataset/Foursquare_NY/ny.poitraj',
+    'SG':'./Dataset/Foursquare_SG/sg.poitraj',
     'TKY':'./Dataset/Foursquare_TKY/tky.poitraj',
 }
 
@@ -82,9 +82,12 @@ def gen_seq_neighbor(dataset_name, window=2,  save_path=None):
                 if poi_id not in seq_sample:
                     seq_sample[poi_id] = []
                 seq_sample[poi_id] = seq_sample[poi_id]+list((temp)['location'])
-        
+
+    x= 0 # 10.545360110803324
     for k in seq_sample.keys():
         seq_sample[k] = set(seq_sample[k])
+        x += len(list(seq_sample[k]))
+    print(x/len(list(seq_sample.keys())))
 
         
     

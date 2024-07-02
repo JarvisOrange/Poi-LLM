@@ -5,6 +5,8 @@ from torch.autograd import Function
 import numpy as np
 import pandas as pd
 
+from einops import rearrange, repeat
+
 
 class LayerNorm(nn.Module):
     def __init__(self, dim):
@@ -26,9 +28,9 @@ class Residual(nn.Module):
     
 
 class Embed2hidden(nn.Module):
-    def __init__(self, dim, dim_latents):
+    def __init__(self, dim, hidden_dim):
         super().__init__()
-        self.to_hidden = nn.Linear(dim, dim_latents, bias=False)
+        self.to_hidden = nn.Linear(dim, hidden_dim, bias=False)
 
     def forward(self, x):
         hidden = self.to_hidden(x)
@@ -337,8 +339,6 @@ class POI_LLM(nn.Module):
         dim_head=64,
         heads=8,
         ff_mult=4,
-        img_encoder=None,
-        caption_loss_weight=1.,
         contrastive_loss_weight=1.,
         pad_id=0
     ):
@@ -457,9 +457,8 @@ class POI_LLM(nn.Module):
 
     def forward(
         self,
-        text,
-        images=None,
-        image_tokens=None,
+        batch,
+        
         labels=None,
         return_loss=False,
         return_embeddings=False
@@ -521,3 +520,60 @@ class POI_LLM(nn.Module):
         contrastive_loss = contrastive_loss * self.contrastive_loss_weight
 
         return caption_loss + contrastive_loss
+
+
+class SelfAttentionBlock(nn.Module):
+    def __init__(self, dim, hidden_dim):
+        pass
+
+    def forward(self, x):
+        """ 
+        b - batch
+        d - feature dimension
+        """
+        x = self.norm(x)
+
+        x = x.unsqueeze(1) #b d -> b 1 d
+
+        q = self.to_q(x)
+        q = rearrange(q, 'b n (h d) -> b h n d', h = self.heads)
+
+        q = q * self.scale
+
+        k, v = self.to_kv(x).chunk(2, dim=-1)
+
+        sim = einsum('b h i d, b j d -> b h i j', q, k)
+
+        sim = sim - sim.amax(dim=-1, keepdim=True)
+        attn = sim.softmax(dim=-1)
+
+        out = einsum('b h i j, b j d -> b h i d', attn, v)
+        out = rearrange(out, 'b h n d -> b n (h d)')
+
+        out = out.squeeze(1) # b 1 d -> b  d
+        out = self.to_out(out)
+        
+
+        
+        
+class EmbeddingBlock(nn.Module):
+    def __init__(self, embed_path):
+        self.embed = torch.load(embed_path)
+
+    def forward(self, x):
+        return self.embed(x)
+
+
+if __name__ == "__main__":
+    LLM_embed = torch.load("./Temp/NY_POI_LAST_allpoi.27.pt")
+
+    POI_embed = torch.load("./poi_embed/10003/poi_repr/poi_repr.pth")
+
+    poi_num = POI_embed.shape[0]
+
+    LLM_embed = LLM_embed[:poi_num,:]
+    
+        
+
+
+    # LLM_embedding_layer = 
