@@ -10,6 +10,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
+from datasets import Dataset
 
 from tqdm import tqdm
 from loguru import logger
@@ -17,9 +18,10 @@ from loguru import logger
 import einops
 from transformers import AutoTokenizer, AutoModel
 
+
 def create_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--gpu", type=int, default=0, help="gpu")
+    parser.add_argument("--gpu", type=int, default=1, help="gpu")
 
     parser.add_argument(
         "--LLM",
@@ -32,17 +34,16 @@ def create_args():
     parser.add_argument(
         "--dataset",
         type=str,
-        default="instagram_NY",
-        choices=["instagram_NY", "foursquare_NY", "foursquare_TKY"],
+        default="NY",
+        choices=["NY", "SG", "TKY"],
         help="which dataset",
     )
 
     parser.add_argument(
         "--prompt_type",
         type=str,
-        default="None",
-        choices=["lonlat", 'address', 'time','category'],
-        help="which LLM to use",
+        default="time",
+        choices=['address', 'time','cat_nearby'],
     )
 
     args = parser.parse_args()
@@ -54,26 +55,23 @@ def main():
     args = create_args()
     device = torch.device("cuda:"+str(args.gpu) if torch.cuda.is_available() else "cpu")
 
-    tokenizer = AutoTokenizer.from_pretrained(args.LLM, trust_remote_code=True)
-    model = AutoModel.from_pretrained(args.LLM, trust_remote_code=True).half().cuda(device)
+
+    LLM_datapath = "./LLMs/"+args.LLM
+
+    tokenizer = AutoTokenizer.from_pretrained(LLM_datapath, trust_remote_code=True)
+    model = AutoModel.from_pretrained(LLM_datapath, trust_remote_code=True).half().cuda(device)
+
+    if tokenizer.pad_token is None:
+        tokenizer.add_special_tokens({'pad_token': '[PAD]'})
+        model.resize_token_embeddings(len(tokenizer))
+
     model = model.eval()
 
-    dataset_dir = "./Dataset/" + args.dataset + "POI.csv"
+    prompt_data_path = "./Prompt/" + "" + args.dataset +"/"+ "prompt_" + args.dataset + "_" + args.prompt_type + '.csv'
 
-    PROMPTS = {
-        'lonlat': ' ',
-        'address': '',
-        'time': ' ',
-        'poi': '  ',
-    }
 
-    poi_info =  pd.read_csv("../dataset/instagram_data/poi_index.txt", sep='\t')
-
-    oldpoi_df = pd.read_csv("../dataset/instagram_data/train_content.txt", sep='\t', header=None)
-
-    poi_df = poi_info.iloc[oldpoi_df.iloc[:,0],:]
-    poi_df.columns = ['Index','NAME']
-    dataset_strings = [ PROMPTS['where_is'] + poi_info.iloc[poi_index,1] for poi_index in list(oldpoi_df.iloc[:,0]) ]
+    prompt_df = pd.read_csv(prompt_data_path, header=0)
+    dataset_strings = list(prompt_df['prompt'])
 
     tk_result = tokenizer.batch_encode_plus(
             dataset_strings,
@@ -97,8 +95,7 @@ def main():
     entity_mask[token_ids == tokenizer.pad_token_id] = False
 
 
-    tk_dataset = datasets.Dataset.from_dict({
-            'entity': poi_df['NAME'].to_list(),
+    tk_dataset = Dataset.from_dict({
             'input_ids': token_ids.tolist(),
             'entity_mask': entity_mask.tolist(),
         })
@@ -108,8 +105,10 @@ def main():
     #  activation extraction
 
     def process_activation_batch(batch_activations, step, batch_mask=None):
-        batch_activations = einops.rearrange(batch_activations, 'c b d -> b c d')
+        # batch_activations = einops.rearrange(batch_activations, 'c b d -> b c d')
+
         cur_batch_size = batch_activations.shape[0]
+
         last_ix = batch_activations.shape[1] - 1
         batch_mask = batch_mask.to(int)
         last_entity_token = last_ix - \
@@ -121,18 +120,23 @@ def main():
             expanded_mask,
             torch.arange(d_act)
         ]
+
         assert processed_activations.shape == (cur_batch_size, d_act)
 
         return processed_activations
     
 
     with torch.no_grad():
-        
-        layers = list(range(model.config.num_layers))
+        if args.LLM == 'llama2' or args.LLM =='llama3':
+            layers = list(range(model.config.num_hidden_layers))
+        elif  args.LLM == 'chatglm-6b':
+            layers = list(range(model.config.num_layers))
+        elif  args.LLM == 'gpt2' or args.LLM == 'gpt2-large'or args.LLM == 'gpt2-medium' or args.LLM == 'gpt2-xl':
+            layers = list(range(model.config.n_layer))
+
         entity_mask = torch.tensor(tk_dataset['entity_mask'])
 
         n_seq, ctx_len = token_ids.shape
-
 
         activation_rows = n_seq
 
@@ -141,6 +145,7 @@ def main():
                             dtype=torch.float16)
                 for l in layers
             }
+        
         offset = 0
         bs = 128
         layer_offsets = {l: 0 for l in layers}
@@ -155,7 +160,7 @@ def main():
             
             batch = batch[:, :last_valid_ix].to(device)
             batch_entity_mask = batch_entity_mask[:, :last_valid_ix]
-            batch[batch_entity_mask] = model.config.mask_token_id
+  
             out = model(batch, output_hidden_states=True,
                         output_attentions=False, return_dict=True, use_cache=False)
 
@@ -164,6 +169,7 @@ def main():
                 if lix not in layer_activations:
                     continue
                 activation = activation.cpu().to(torch.float16)
+            
                 processed_activations = process_activation_batch(
                         activation, step, batch_entity_mask)
                 
@@ -182,20 +188,20 @@ def main():
 
             offset += batch.shape[0]
 
-    for layer_ix, activations in layer_activations.items():
+
+    last_layer_id = layers[-1]
+
+    last_layer_activation = layer_activations[last_layer_id]
         
-        activation_save_path = "./result/instagram_NY_glm_6b/"
-        if not os.path.exists(activation_save_path):
-            os.makedirs(activation_save_path)
-        # save_name = f'{args.entity_type}.{args.activation_aggregation}.{prompt_name}.{layer_ix}.pt'
-        save_name = f'NY_POI_LAST.{layer_ix}.pt'
-        save_path = os.path.join(activation_save_path, save_name)
-        # activations = adjust_precision(
-        #     activations.to(torch.float32), args.save_precision, per_channel=True)
-        torch.save(activations, save_path)
+    save_path = "./Embed/LLM_Embed/" + "" + args.dataset +"/"    
+    save_name = f'{args.dataset}_{args.LLM}_{args.prompt_type}_LAST.pt'
 
+    if not os.path.exists(save_path):
+        os.makedirs(save_path)
 
-    
+    save_path = os.path.join(save_path, save_name)
+
+    torch.save(last_layer_activation, save_path)
 
 
 if __name__ == "__main__":
