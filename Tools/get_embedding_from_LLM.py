@@ -27,7 +27,7 @@ def create_args():
         "--LLM",
         type=str,
         default="llama2",
-        choices=["llama2", "llama3", "chatglm2", "chatglm2-6b", "gpt2","gpt2-medium","gpt2-large","gpt2-xl"],
+        choices=["llama2", "llama3", "chatglm2-6b", "gpt2","gpt2-medium","gpt2-large","gpt2-xl"],
         help="which LLM to use",
     )
 

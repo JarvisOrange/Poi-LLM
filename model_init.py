@@ -7,6 +7,12 @@ import pandas as pd
 
 from einops import rearrange, repeat
 
+from torch.utils import data
+from torch.utils.data import DataLoader	
+from info_nce import InfoNCE, info_nce
+
+from tqdm import *
+
 
 class LayerNorm(nn.Module):
     def __init__(self, dim):
@@ -33,253 +39,33 @@ class SwiGLU(nn.Module):
         return F.silu(gate) * x
 
 
-class POI_LLM(nn.Module):
-    def __init__(
-        self,
-        *,
-        dim,
-        num_tokens,
-        unimodal_depth,
-        multimodal_depth,
-        dim_latents = None,
-        image_dim = None,
-        num_img_queries=256,
-        dim_head=64,
-        heads=8,
-        ff_mult=4,
-        contrastive_loss_weight=1.,
-        pad_id=0
-    ):
-        super().__init__()
-        self.dim = dim
-
-        self.pad_id = pad_id
-        self.caption_loss_weight = caption_loss_weight
-        self.contrastive_loss_weight = contrastive_loss_weight
-
-        # token embeddings
-
-        self.token_emb = nn.Embedding(num_tokens, dim)
-        self.text_cls_token = nn.Parameter(torch.randn(dim))
-
-        # image encoder
-
-        self.img_encoder = img_encoder
-
-        # attention pooling for image tokens
-
-        self.img_queries = nn.Parameter(torch.randn(num_img_queries + 1, dim)) # num image queries for multimodal, but 1 extra CLS for contrastive learning
-        self.img_attn_pool = CrossAttention(dim=dim, context_dim=image_dim, dim_head=dim_head, heads=heads, norm_context=True)
-
-        self.img_attn_pool_norm = LayerNorm(dim)
-        self.text_cls_norm = LayerNorm(dim)
-
-        # to latents
-
-        dim_latents = default(dim_latents, dim)
-        self.img_to_latents = EmbedToLatents(dim, dim_latents)
-        self.text_to_latents = EmbedToLatents(dim, dim_latents)
-
-        # contrastive learning temperature
-
-        self.temperature = nn.Parameter(torch.Tensor([1.]))
-
-        # unimodal layers
-
-        self.unimodal_layers = nn.ModuleList([])
-        for ind in range(unimodal_depth):
-            self.unimodal_layers.append(
-                Residual(ParallelTransformerBlock(dim=dim, dim_head=dim_head, heads=heads, ff_mult=ff_mult)),
-            )
-
-        # multimodal layers
-
-        self.multimodal_layers = nn.ModuleList([])
-        for ind in range(multimodal_depth):
-            self.multimodal_layers.append(nn.ModuleList([
-                Residual(ParallelTransformerBlock(dim=dim, dim_head=dim_head, heads=heads, ff_mult=ff_mult)),
-                Residual(CrossAttention(dim=dim, dim_head=dim_head, heads=heads, parallel_ff=True, ff_mult=ff_mult))
-            ]))
-
-        # to logits
-
-        self.to_logits = nn.Sequential(
-            LayerNorm(dim),
-            nn.Linear(dim, num_tokens, bias=False)
-        )
-
-        # they used embedding weight tied projection out to logits, not common, but works
-        self.to_logits[-1].weight = self.token_emb.weight
-        nn.init.normal_(self.token_emb.weight, std=0.02)
-
-        # whether in data parallel setting
-        self.is_distributed = dist.is_initialized() and dist.get_world_size() > 1
-
-    def embed_text(self, text):
-        batch, device = text.shape[0], text.device
-
-        seq = text.shape[1]
-
-        text_tokens = self.token_emb(text)
-
-        # append text cls tokens
-
-        text_cls_tokens = repeat(self.text_cls_token, 'd -> b 1 d', b=batch)
-        text_tokens = torch.cat((text_tokens, text_cls_tokens), dim=-2)
-
-        # create specific mask for text cls token at the end
-        # to prevent it from attending to padding
-
-        cls_mask = rearrange(text!=self.pad_id, 'b j -> b 1 j')
-        attn_mask = F.pad(cls_mask, (0, 1, seq, 0), value=True)
-
-        # go through unimodal layers
-
-        for attn_ff in self.unimodal_layers:
-            text_tokens = attn_ff(text_tokens, attn_mask=attn_mask)
-
-        # get text cls token
-
-        text_tokens, text_cls_tokens = text_tokens[:, :-1], text_tokens[:, -1]
-        text_embeds = self.text_cls_norm(text_cls_tokens)
-        return text_embeds, text_tokens
-
-    def embed_image(self, images=None, image_tokens=None):
-        # encode images into embeddings
-        # with the img_encoder passed in at init
-        # it can also accept precomputed image tokens
-
-        assert not (exists(images) and exists(image_tokens))
-
-        if exists(images):
-            assert exists(self.img_encoder), 'img_encoder must be passed in for automatic image encoding'
-            image_tokens = self.img_encoder(images)
-
-        # attention pool image tokens
-
-        img_queries = repeat(self.img_queries, 'n d -> b n d', b=image_tokens.shape[0])
-        img_queries = self.img_attn_pool(img_queries, image_tokens)
-        img_queries = self.img_attn_pool_norm(img_queries)
-
-        return img_queries[:, 0], img_queries[:, 1:]
-
-    def forward(
-        self,
-        batch,
-        
-        labels=None,
-        return_loss=False,
-        return_embeddings=False
-    ):
-        batch, device = text.shape[0], text.device
-
-        if return_loss and not exists(labels):
-            text, labels = text[:, :-1], text[:, 1:]
-
-        text_embeds, text_tokens = self.embed_text(text)
-
-        image_embeds, image_tokens = self.embed_image(images=images, image_tokens=image_tokens)
-
-        # return embeddings if that is what the researcher wants
-
-        if return_embeddings:
-            return text_embeds, image_embeds
-
-        # go through multimodal layers
-
-        for attn_ff, cross_attn in self.multimodal_layers:
-            text_tokens = attn_ff(text_tokens)
-            text_tokens = cross_attn(text_tokens, image_tokens)
-
-        logits = self.to_logits(text_tokens)
-
-        if not return_loss:
-            return logits
-
-        # shorthand
-
-        ce = F.cross_entropy
-
-        # calculate caption loss (cross entropy loss)
-
-        logits = rearrange(logits, 'b n c -> b c n')
-        caption_loss = ce(logits, labels, ignore_index=self.pad_id)
-        caption_loss = caption_loss * self.caption_loss_weight
-
-        # embedding to latents
-
-        text_latents = self.text_to_latents(text_embeds)
-        image_latents = self.img_to_latents(image_embeds)
-
-        # maybe distributed all gather
-
-        if self.is_distributed:
-            latents = torch.stack((text_latents, image_latents), dim = 1)
-            latents = all_gather(latents)
-            text_latents, image_latents = latents.unbind(dim = 1)
-
-        # calculate contrastive loss
-
-        sim = einsum('i d, j d -> i j', text_latents, image_latents)
-        sim = sim * self.temperature.exp()
-        contrastive_labels = torch.arange(batch, device=device)
-
-        contrastive_loss = (ce(sim, contrastive_labels) + ce(sim.t(), contrastive_labels)) * 0.5
-        contrastive_loss = contrastive_loss * self.contrastive_loss_weight
-
-        return caption_loss + contrastive_loss
-
-
-
 class FusedAttentionBlock(nn.Module):
-    def __init__(self, dim_in, dim_out, head, ff_mult):
-        self.heads = heads
-        self.scale = 
-        
-        self.to_q = nn.Linear()
-
-        self.
-
-
-        self.feedforward = nn.Sequential(
-            nn.Linear(dim, ff_inner_dim * 2, bias=False),
-            SwiGLU(),
-            nn.Linear(ff_inner_dim, dim, bias=False)
-        )
-
+    def __init__(self, dim, dim_fused):
+        super().__init__()
+        self.fuse1 = CrossAttentionBlock(dim, dim_fused,  heads=1) 
+        self.fuse2 = CrossAttentionBlock(dim, dim_fused,  heads=1) 
+        self.fuse3 = CrossAttentionBlock(dim, dim_fused,  heads=1) 
+        self.fuse4 = CrossAttentionBlock(dim, dim_fused,  heads=1) 
+        self.fuse5 = CrossAttentionBlock(dim, dim_fused,  heads=1) 
+        self.fuse6 = CrossAttentionBlock(dim, dim_fused,  heads=1) 
+                  
+                 
+                 
     def forward(self, x1, x2, x3, x4, x5, x6, y):
         """ 
         b - batch
         d - feature dimension
         """
 
+        z1 =  self.fuse1(x1, y)
+        z2 =  self.fuse1(x2, y)
+        z3 =  self.fuse1(x3, y)
+        z4 =  self.fuse1(x4, y)
+        z5 =  self.fuse1(x5, y)
+        z6 =  self.fuse1(x6, y)
+        
 
-        x = self.norm(x)
-
-
-        q = self.to_q(x)
-        q = rearrange(q, 'b n (h d) -> b h n d', h = self.heads)
-
-        q = q * self.scale
-
-        k, v = self.to_kv(x).chunk(2, dim=-1)
-
-        sim = einsum('b h i d, b j d -> b h i j', q, k)
-
-        sim = sim - sim.amax(dim=-1, keepdim=True)
-        attn = sim.softmax(dim=-1)
-
-        out = einsum('b h i j, b j d -> b h i d', attn, v)
-        out = rearrange(out, 'b h n d -> b n (h d)')
-
-        out = self.to_out(out)
-
-        out = out + self.feedforward(x)
-
-        return out
-
-
-
+        return torch.cat([z1,z2,z3,z4,z5,z6], dim = -1)
 
 
 
@@ -308,7 +94,7 @@ class CrossAttentionBlock(nn.Module):
 
         ff_inner_dim = ff_mult * dim
 
-        self.ff = nn.Sequential(
+        self.feedforward = nn.Sequential(
             nn.Linear(dim, ff_inner_dim * 2, bias=False),
             SwiGLU(),
             nn.Linear(ff_inner_dim, dim, bias=False)
@@ -370,7 +156,7 @@ class SelfAttentionBlock(nn.Module):
 
         ff_inner_dim = ff_mult * dim
 
-        self.ff = nn.Sequential(
+        self.feedforward = nn.Sequential(
             nn.Linear(dim, ff_inner_dim * 2, bias=False),
             SwiGLU(),
             nn.Linear(ff_inner_dim, dim, bias=False)
@@ -415,16 +201,19 @@ class Embed2hidden(nn.Module):
         hidden = self.to_hidden(x)
         return F.normalize(hidden, dim=-1)       
         
+
 class EmbeddingBlock(nn.Module):
-    def __init__(self, hidden_dim=256, embed_path='', dim_reduct=True):
+    def __init__(self, hidden_dim=256,  dim_reduct=True, embed_path=''):
+        super().__init__()
         self.embed = torch.load(embed_path)
         num, dim = self.embed.shape
+        self.shape = self.embed.shape
 
-        self.embedding_layer = nn.Embedding(num, dim, _weight=self.embed)
+        self.embedding_layer = nn.Embedding(num, dim, _weight=self.embed).half()
         
         self.dim_reduct = dim_reduct
         if self.dim_reduct: 
-            self.embed2hidden = Embed2hidden(self.dim_embed, dim)
+            self.embed2hidden = Embed2hidden(dim, hidden_dim)
         else:
             self.embed2hidden = nn.Identity()
         
@@ -434,63 +223,150 @@ class EmbeddingBlock(nn.Module):
             x = self.embedding_layer(x)
         out = self.embed2hidden(x)
         return out
+
+    def get_shape(self):
+        return self.shape
  
+
 class PoiEnhancer(nn.Module):
-    def __init__(self, 
-                 poi_repr_embedding_layer,
-                 llm_embedding_layer_tuple
-                 ):
+    def __init__(self,  llm_e_path1, llm_e_path2, llm_e_path3, poi_e_path):
         
         super().__init__()
-        self.llm_layer1, self.llm_layer2, self.llm_layer3 = llm_embedding_layer_tuple
-        self.poi_layer = poi_repr_embedding_layer
+        
+        self.llm_layer1 = EmbeddingBlock(embed_path = llm_e_path1)
+        self.llm_layer2 = EmbeddingBlock(embed_path = llm_e_path2)
+        self.llm_layer3 = EmbeddingBlock(embed_path = llm_e_path3)
 
-        self.EmbeddingBlock
+        self.poi_layer = EmbeddingBlock(embed_path = poi_e_path, dim_reduct=False)
 
-        self.attention_block1 = AttentionBlock(dim_in, dim_out, head, ff_mult)
-        self.attention_block2 = AttentionBlock()
-        self.attention_block3 = AttentionBlock()
+        self.llm_e_dim = self.llm_layer1.get_shape()[1]
+        self.poi_e_dim = self.poi_layer.get_shape()[1]
 
-        self.cross_attention_block12 = CrossAttentionBlock() 
-        self.cross_attention_block13 = CrossAttentionBlock() 
-        self.cross_attention_block21 = CrossAttentionBlock() 
-        self.cross_attention_block23 = CrossAttentionBlock() 
-        self.cross_attention_block31 = CrossAttentionBlock() 
-        self.cross_attention_block32 = CrossAttentionBlock() 
+        self.attention_block1 = SelfAttentionBlock(dim=self.poi_e_dim)
+        self.attention_block2 = SelfAttentionBlock(dim=self.poi_e_dim)
+        self.attention_block3 = SelfAttentionBlock(dim=self.poi_e_dim)
 
-        self.fused_attention_block = FusedAttentionBlock()
+        self.cross_attention_block12 = CrossAttentionBlock(dim=self.poi_e_dim, dim_fused=self.poi_e_dim) 
+        self.cross_attention_block13 = CrossAttentionBlock(dim=self.poi_e_dim, dim_fused=self.poi_e_dim) 
+        self.cross_attention_block21 = CrossAttentionBlock(dim=self.poi_e_dim, dim_fused=self.poi_e_dim) 
+        self.cross_attention_block23 = CrossAttentionBlock(dim=self.poi_e_dim, dim_fused=self.poi_e_dim) 
+        self.cross_attention_block31 = CrossAttentionBlock(dim=self.poi_e_dim, dim_fused=self.poi_e_dim) 
+        self.cross_attention_block32 = CrossAttentionBlock(dim=self.poi_e_dim, dim_fused=self.poi_e_dim) 
+
+        self.fused_attention_block = FusedAttentionBlock(dim=self.poi_e_dim, dim_fused=self.poi_e_dim)
 
 
         
 
     def forward(self, batch):
-        with torch.no_grad():
-            llm_e1 = self.llm_layer1(batch)
-            llm_e2 = self.llm_layer1(batch)
-            llm_e3 = self.llm_layer1(batch)
+    
+        llm_e1 = self.llm_layer1(batch)
+        
+        llm_e2 = self.llm_layer2(batch)
+        llm_e3 = self.llm_layer3(batch)
 
-            p_e = self.poi_layer(batch)
+        y = self.poi_layer(batch)
 
         
+        x1 = self.attention_block1(llm_e1)
+        x2 = self.attention_block2(llm_e2)
+        x3 = self.attention_block3(llm_e3)
+
+        
+
+        x12 = self.cross_attention_block12(x1, x2)
+        x13 = self.cross_attention_block13(x1, x2)
+        x21 = self.cross_attention_block21(x1, x2)
+        x23 = self.cross_attention_block23(x1, x2)
+        x31 = self.cross_attention_block31(x1, x2)
+        x32 = self.cross_attention_block32(x1, x2)
+
+        z = self.fused_attention_block(x12,x13,x21,x23,x31,x32,y)
+
+        query, positive, negative = z[:,0,:], z[:,1,:], z[:,1:,:]
+
+        query = query.squeeze(1)
+        positive = positive.squeeze(1)
+
+        return z, query, positive, negative
+
+
+
+
+class ContrastDataset(data.Dataset):
+    def __init__(self,  path, device):
+        df = pd.read_csv(path,sep=',', header=0, dtype={'anchor':int,'positive':int, 'negative':str})
+        df['negative'] = df['negative'].apply(lambda x : eval(x))
+        self.device = device
+        self.data = df
+        self.data = self.data.values
+
+        
+    def __getitem__(self, index):
+        anchor, pos, negative = self.data[index]
+        data = [anchor, pos] + negative
+        data = torch.IntTensor(data).to(self.device)
+        
+        return data
+    
+    def __len__(self):
+        return len(self.data)
         
     
 
 
 if __name__ == "__main__":
-    LLM_cat_neaby_embed = torch.load("./Embed/LLM_Embed/NY/NY_llama2_cat_nearby_LAST.pt").to('cuda:0')
-    LLM_address_embed = torch.load("./Embed/LLM_Embed/NY/NY_llama2_address_LAST.pt")
-    LLM_time_embed = torch.load("./Embed/LLM_Embed/NY/NY_llama2_time_LAST.pt")
 
-    POI_embed = torch.load("./Embed/Poi_Model_Embed/tale_128_ny/poi_repr/poi_repr.pth")
+    path1 = "./Embed/LLM_Embed/NY/NY_llama2_time_LAST.pt"
+    path2 = "./Embed/LLM_Embed/NY/NY_llama2_address_LAST.pt"
+    path3 = "./Embed/LLM_Embed/NY/NY_llama2_cat_nearby_LAST.pt"
+    path4 = "./Embed/Poi_Model_Embed/tale_256_ny/poi_repr/poi_repr.pth"
 
-    poi_num, dim = POI_embed.shape
+    device = 'cuda:2'
+    batch_size = 64
+    EPOCH = 200
 
-    # x = LLM_address_embed.shape
-    z = LLM_cat_neaby_embed.shape
+    train_dataset = ContrastDataset('./ContrastDataset/train.csv', device)
+    train_dataloader = DataLoader(train_dataset, batch_size = batch_size, shuffle=True)
 
-    poi_repr_embedding_layer = nn.Embedding(poi_num, dim, _weight=POI_embed)
+    # LLM_cat_neaby_embed = torch.load("./Embed/LLM_Embed/NY/NY_llama2_cat_nearby_LAST.pt").to('cuda:0')
+    # LLM_address_embed = torch.load("./Embed/LLM_Embed/NY/NY_llama2_address_LAST.pt")
+    # LLM_time_embed = torch.load("./Embed/LLM_Embed/NY/NY_llama2_time_LAST.pt")
 
-    llm_embedding_layer = nn.Embedding(poi_num, dim, _weight=LLM_cat_neaby_embed)
+    # POI_embed = torch.load("./Embed/Poi_Model_Embed/tale_128_ny/poi_repr/poi_repr.pth")
+
+
+
+    Model = PoiEnhancer(path1, path2, path3, path4).half().cuda(device)
+    Model.train()
+    optimizer = torch.optim.Adam(Model.parameters(), lr=0.001)
+
+    
+    nceloss = InfoNCE(negative_mode='paired')
+   
+
+    for e in tqdm(range(EPOCH)):
+        for batch in train_dataloader:
+            _, query, positive, negative = Model(batch)
+            loss = nceloss(query, positive, negative)
+
+            optimizer.zero_grad()
+
+            loss.backward()
+
+            optimizer.step()
+
+
+
+
+
+
+    
+
+
+    
+
+   
 
     
         
