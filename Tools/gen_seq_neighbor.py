@@ -13,7 +13,7 @@ import itertools
 import math
 import random
 from random import choice
-
+import os
 
 dataset_path_dict = {
     'NY':'./Dataset/Foursquare_NY/ny.poitraj',
@@ -50,7 +50,7 @@ def get_day(time):
         return (year, month, day)
         
 
-def gen_seq_neighbor(dataset_name, window=2,  save_path=None):
+def gen_seq_neighbor(dataset_name, window=2,   save_path="./ContrastDataset/"):
     data_path = dataset_path_dict[dataset_name]
 
     poi_df = pd.read_csv(data_path, sep=',', header=0)
@@ -61,6 +61,7 @@ def gen_seq_neighbor(dataset_name, window=2,  save_path=None):
     else:
         poi_df.columns = ["dyna_id","type","time","entity_id","location"]
         poi_df = poi_df.loc[:, columns_standard]
+
     
 
     traj_group = poi_df.groupby("entity_id")
@@ -84,12 +85,21 @@ def gen_seq_neighbor(dataset_name, window=2,  save_path=None):
                 seq_sample[poi_id] = seq_sample[poi_id]+list((temp)['location'])
 
     x= 0 # 10.545360110803324
+    seq_neighbor_list = []
     for k in seq_sample.keys():
-        seq_sample[k] = set(seq_sample[k])
-        x += len(list(seq_sample[k]))
-    print(x/len(list(seq_sample.keys())))
+        temp = list(set(seq_sample[k]))
+        seq_sample[k] = temp
+        seq_neighbor_list.append([k,temp])
 
-        
+    seq_neighbor_df = pd.DataFrame(seq_neighbor_list, columns=['geo_id','seq_positive'])
+
+    save_path = save_path +'/'+ dataset_name +'/'
+    if not os.path.exists(save_path):
+            os.makedirs(save_path)
+    name =  dataset_name + "_seq_positive.csv"
+
+    seq_neighbor_df.to_csv(save_path + name, sep=',', index=False, header=True)
+
+
     
-
 gen_seq_neighbor('NY')

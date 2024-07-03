@@ -13,7 +13,7 @@ import itertools
 import math
 import random
 from random import choice
-
+import os
 
 dataset_path_dict = {
     'NY':'./Dataset/Foursquare_NY/ny.geo',
@@ -28,7 +28,7 @@ time_dataset_path_dict = {
 }
 
 
-def gen_timecat_neighbor(dataset_name, save_path=None):
+def gen_timecat_neighbor(dataset_name, save_path="./ContrastDataset/"):
     data_path = dataset_path_dict[dataset_name]
 
     columns_standard = ["geo_id","coordinates","category"]
@@ -44,6 +44,9 @@ def gen_timecat_neighbor(dataset_name, save_path=None):
     poi_df.columns = columns_standard 
     poi_df['lon'] = poi_df['coordinates'].apply(lambda x: eval(x)[0])
     poi_df['lat'] = poi_df['coordinates'].apply(lambda x: eval(x)[1])
+
+    first = poi_df.iloc[0,0]
+    poi_df['geo_id'] = poi_df['geo_id'].apply(lambda x: x - first)
     
 
     time_data_path = time_dataset_path_dict[dataset_name]
@@ -56,7 +59,7 @@ def gen_timecat_neighbor(dataset_name, save_path=None):
 
     
     x= 0 # 269.7588670826732
-    time_cat_neighbor_dict = {}
+    time_cat_neighbor_list = []
     for _, row in tqdm(poi_df.iterrows(), total=poi_df.shape[0]):
         poi_id = row['geo_id']
         poi_cat, day_feature, hour_feature = row['category'],  row['day_feature'], row['hour_feature']
@@ -64,11 +67,20 @@ def gen_timecat_neighbor(dataset_name, save_path=None):
                       (poi_df['day_feature'] == day_feature) &
                       (poi_df['hour_feature'] == hour_feature) &
                       (poi_df['geo_id'] != poi_id)]
-        time_cat_neighbor_dict['geo_id'] = list(temp['geo_id'])
-        x+=len(list(temp['geo_id']))
+        temp = list(temp['geo_id'])
+        time_cat_neighbor_list.append([poi_id,temp])
+
+        x+=len(temp)
 
     print(x/poi_df.shape[0])
     
+    time_cat_neighbor_df = pd.DataFrame(time_cat_neighbor_list, columns=['geo_id','time_cat_positive'])
+    save_path = save_path +'/'+ dataset_name +'/'
+    if not os.path.exists(save_path):
+            os.makedirs(save_path)
+    name =  dataset_name + "_time_cat_positive.csv"
+    time_cat_neighbor_df.to_csv(save_path + name, sep=',', index=False, header=True)
+
 
         
     

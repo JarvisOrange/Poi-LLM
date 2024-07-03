@@ -566,21 +566,39 @@ class EmbeddingBlock(nn.Module):
 class PoiEnhancer(nn.Module):
     def __init__(self, 
                  poi_repr_embedding_layer,
-                 llm_embedding_layer_list):
+                 llm_embedding_layer_tuple
+                 ):
+        
         super().__init__()
-        self.llm_embedding_layer_list = llm_embedding_layer_list
-        self.poi_repr_embedding_layer = poi_repr_embedding_layer
+        self.llm_layer1, self.llm_layer2, self.llm_layer3 = llm_embedding_layer_tuple
+        self.poi_layer = poi_repr_embedding_layer
+
+        self.attention_block = 
+
+        self.cross_attention_block = 
+
+        self.fuse_attention_block = 
+
+
         
 
     def forward(self, batch):
-        return 
+        with torch.no_grad():
+            llm_e1 = self.llm_layer1(batch)
+            llm_e2 = self.llm_layer1(batch)
+            llm_e3 = self.llm_layer1(batch)
+
+            p_e = self.poi_layer(batch)
+
+        
+        
     
 
 
 if __name__ == "__main__":
     LLM_cat_neaby_embed = torch.load("./Embed/LLM_Embed/NY/NY_llama2_cat_nearby_LAST.pt").to('cuda:0')
-    # LLM_address_embed = torch.load("./Embed/LLM_Embed/NY/NY_llama2_address_LAST.pt")
-    # LLM_time_embed = torch.load("./Embed/LLM_Embed/NY/NY_llama2_time_LAST.pt")
+    LLM_address_embed = torch.load("./Embed/LLM_Embed/NY/NY_llama2_address_LAST.pt")
+    LLM_time_embed = torch.load("./Embed/LLM_Embed/NY/NY_llama2_time_LAST.pt")
 
     POI_embed = torch.load("./Embed/Poi_Model_Embed/tale_128_ny/poi_repr/poi_repr.pth")
 

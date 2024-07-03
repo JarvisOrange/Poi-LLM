@@ -13,6 +13,7 @@ import itertools
 import math
 import random
 from random import choice
+import os
 
 
 dataset_path_dict = {
@@ -44,7 +45,7 @@ def get_geo_cat_neighbor(poi_list, poi_id, cat, minlon, maxlon, minlat, maxlat):
     return poi_geo_cat_neighbor
 
 
-def gen_poi_geoneighbor(dataset_name,  save_path=None):
+def gen_poi_geoneighbor(dataset_name,  save_path="./ContrastDataset/"):
     data_path = dataset_path_dict[dataset_name]
 
     columns_standard = ["geo_id","coordinates","category"]
@@ -61,9 +62,12 @@ def gen_poi_geoneighbor(dataset_name,  save_path=None):
     poi_df['lon'] = poi_df['coordinates'].apply(lambda x: eval(x)[0])
     poi_df['lat'] = poi_df['coordinates'].apply(lambda x: eval(x)[1])
 
+    first = poi_df.iloc[0,0]
+    poi_df['geo_id'] = poi_df['geo_id'].apply(lambda x: x - first)
 
 
-    geoneighbor_dict = {}
+
+    geoneighbor_list = []
     # x = 0  #平均23.42181672045914
     for _, row in tqdm(poi_df.iterrows(), total=poi_df.shape[0]):
         poi_id = row['geo_id']
@@ -71,9 +75,18 @@ def gen_poi_geoneighbor(dataset_name,  save_path=None):
         lon, lat = row['lon'],  row['lat']
         minlon, maxlon, minlat, maxlat = cal_degree(lon, lat)
         poi_geo_cat_neighbor = get_geo_cat_neighbor(poi_df, poi_id, cat, minlon, maxlon, minlat, maxlat)
-        geoneighbor_dict['geo_id'] =  list(poi_geo_cat_neighbor['geo_id'])
+        temp =  list(poi_geo_cat_neighbor['geo_id'])
+        geoneighbor_list.append([poi_id, temp])
         
-    
+    geoneighbor_df = pd.DataFrame(geoneighbor_list, columns=['geo_id','geo_positive'])
+
+    save_path = save_path +'/'+ dataset_name +'/'
+    if not os.path.exists(save_path):
+            os.makedirs(save_path)
+    name =  dataset_name + "_geo_positive.csv"
+    geoneighbor_df.to_csv(save_path + name, sep=',', index=False, header=True)
+
+
     
         
       
