@@ -147,7 +147,7 @@ def main():
             }
         
         offset = 0
-        bs = 128
+        bs = 64
         layer_offsets = {l: 0 for l in layers}
         dataloader = DataLoader(tk_dataset['input_ids'], batch_size=bs, shuffle=False)
         

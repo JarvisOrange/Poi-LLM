@@ -563,17 +563,38 @@ class EmbeddingBlock(nn.Module):
     def forward(self, x):
         return self.embed(x)
 
-
-if __name__ == "__main__":
-    LLM_embed = torch.load("./Temp/NY_POI_LAST_allpoi.27.pt")
-
-    POI_embed = torch.load("./poi_embed/10003/poi_repr/poi_repr.pth")
-
-    poi_num = POI_embed.shape[0]
-
-    LLM_embed = LLM_embed[:poi_num,:]
-    
+class PoiEnhancer(nn.Module):
+    def __init__(self, 
+                 poi_repr_embedding_layer,
+                 llm_embedding_layer_list):
+        super().__init__()
+        self.llm_embedding_layer_list = llm_embedding_layer_list
+        self.poi_repr_embedding_layer = poi_repr_embedding_layer
         
 
+    def forward(self, batch):
+        return 
+    
+
+
+if __name__ == "__main__":
+    LLM_cat_neaby_embed = torch.load("./Embed/LLM_Embed/NY/NY_llama2_cat_nearby_LAST.pt").to('cuda:0')
+    # LLM_address_embed = torch.load("./Embed/LLM_Embed/NY/NY_llama2_address_LAST.pt")
+    # LLM_time_embed = torch.load("./Embed/LLM_Embed/NY/NY_llama2_time_LAST.pt")
+
+    POI_embed = torch.load("./Embed/Poi_Model_Embed/tale_128_ny/poi_repr/poi_repr.pth")
+
+    poi_num, dim = POI_embed.shape
+
+    # x = LLM_address_embed.shape
+    z = LLM_cat_neaby_embed.shape
+
+    poi_repr_embedding_layer = nn.Embedding(poi_num, dim, _weight=POI_embed)
+
+    llm_embedding_layer = nn.Embedding(poi_num, dim, _weight=LLM_cat_neaby_embed)
+
+    
+        
+    
 
     # LLM_embedding_layer = 

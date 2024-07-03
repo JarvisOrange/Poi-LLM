@@ -72,9 +72,9 @@ def gen_poi_geoneighbor(dataset_name,  save_path=None):
         minlon, maxlon, minlat, maxlat = cal_degree(lon, lat)
         poi_geo_cat_neighbor = get_geo_cat_neighbor(poi_df, poi_id, cat, minlon, maxlon, minlat, maxlat)
         geoneighbor_dict['geo_id'] =  list(poi_geo_cat_neighbor['geo_id'])
-        x+=len(list(poi_geo_cat_neighbor['geo_id']))
-
-    print(x/poi_df.shape[0])
+        
+    
+    
         
       
         

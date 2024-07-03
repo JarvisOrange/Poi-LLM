@@ -85,16 +85,18 @@ def main():
 
     poi_df.columns = columns_standard 
 
+    poi_feature_df = pd.read_csv(feature_data_path, sep=',', header=0, dtype={'osm_calculated_postcode':str})
 
-    poi_feature_df = pd.read_csv(feature_data_path, sep=',', header=0)
+    poi_df = pd.merge(poi_df,poi_feature_df, how='outer', on='geo_id')
 
-    poi_df = pd.merge(poi_df,poi_feature_df, how='inner', on='geo_id')
-
+    poi_df=poi_df.fillna("")
+   
     prompt_result = []
 
-    prompt_base = "The latitude and longitude of the POI are "
+    prompt_base = "Coordinates: The latitude and longitude of the POI are "
 
     if prompt_type == 'address':
+
         for _, row in tqdm(poi_df.iterrows(), total=poi_df.shape[0]):
             prompt = ""
             temp = eval(row['coordinates'])
@@ -109,14 +111,30 @@ def main():
                 lon = str(lon) +" East"
 
             prompt += prompt_base + lon +" and " + lat + '.'
-            
-            postcode = row['postcode']
+
+            prompt += "\n" + "Address Information: "
+
+            name_info = eval(row['osm_names'])
+
+            name = ""
+            if "name:en" in name_info:
+                name = name_info['name:en']
+            elif "name" in name_info:
+                name = name_info['name']
+            if name !='':
+                prompt +=  "The name of this POI is " + name + "."
+
             housenumber = row['housenumber']
             street = row['street']
-            country = row['country']
+            if street !='' and housenumber !='':
+                prompt +=  " The POI is located at " + housenumber + " " +street + "."
+            
+            postcode = str(row['osm_calculated_postcode'])
+            if postcode !='':
+                prompt +=  " The postcode of this POI is " + postcode + "."
 
-            # prompt_address = 
-
+            prompt += "\n"+"Question: Where is the POI in " + dataset_city_dict[dataset_name] +"?"
+            prompt_result.append(prompt)
         
     elif prompt_type == 'time':
         for _, row in tqdm(poi_df.iterrows(), total=poi_df.shape[0]):
@@ -136,10 +154,13 @@ def main():
 
             day = row['day_feature'] 
             hour = row['hour_feature']
+            if day == "" or hour == "":
+                prompt+= "\n"+"Check-in Time Information: The POI has no user check-in record. "
+            else:
+                prompt+= "\n"+"Time Information: People usually visit this POI " + time_dict[hour]+". "
+                prompt+= " And people usually come to this POI on " + day +'s.'
 
-            prompt+= "\n"+"Time Information: people usually visit this POI " + time_dict[hour]+", "
-            prompt+= "and usually come to this POI on " + day +'s.'
-
+            prompt += "\n"+"Question: Where is the POI in " + dataset_city_dict[dataset_name] +"?"
             prompt_result.append(prompt)
 
             
@@ -165,24 +186,20 @@ def main():
             category = row['category']
             category_nearby = row['category_nearby']
 
-            prompt += "\n"+"Category Information: the POI is a " + category + "."
+            prompt += "\n"+"Category Information: The POI is a " + category + "."
 
             if category_nearby != " ":   
-                prompt += "And there are " + category_nearby + " near this POI."
+                prompt += " And there are " + category_nearby + " near this POI."
 
-            prompt += "\n"+"Where is the POI in " + dataset_city_dict[dataset_name] +" ?"
-
+            prompt += "\n"+"Question: Where is the POI in " + dataset_city_dict[dataset_name] +"?"
             prompt_result.append(prompt)
 
-
+        
+    
     save_data_path = "./Prompt/" + "" + dataset_name +"/"+ "prompt_" + dataset_name + "_" + prompt_type + '.csv'
     save_prompt(prompt_result, save_data_path)
             
             
-            
-
-
-
-
+        
 if __name__ == "__main__":
     main()
