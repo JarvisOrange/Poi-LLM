@@ -27,303 +27,11 @@ class Residual(nn.Module):
         return self.fn(x) + x
     
 
-class Embed2hidden(nn.Module):
-    def __init__(self, dim, hidden_dim):
-        super().__init__()
-        self.to_hidden = nn.Linear(dim, hidden_dim, bias=False)
-
-    def forward(self, x):
-        hidden = self.to_hidden(x)
-        return F.normalize(hidden, dim=-1)
-    
-
 class SwiGLU(nn.Module):
     def forward(self, x):
         x, gate = x.chunk(2, dim=-1)
         return F.silu(gate) * x
 
-
-class TransformerBlock(nn.Module):
-    def __init__(self, dim, dim_head=64, heads=8, ff_mult=4):
-        super().__init__()
-        self.norm = LayerNorm(dim)
-
-        attn_inner_dim = dim_head * heads
-        ff_inner_dim = dim * ff_mult
-        self.fused_dims = (attn_inner_dim, dim_head, dim_head, (ff_inner_dim * 2))
-
-        self.heads = heads
-        self.scale = dim_head**-0.5
-        self.rotary_emb = RotaryEmbedding(dim_head)
-
-        self.fused_attn_ff_proj = nn.Linear(dim, sum(self.fused_dims), bias=False)
-        self.attn_out = nn.Linear(attn_inner_dim, dim, bias=False)
-
-        self.ff_out = nn.Sequential(
-            SwiGLU(),
-            nn.Linear(ff_inner_dim, dim, bias=False)
-        )
-
-        # for caching causal mask and rotary embeddings
-
-        self.mask = None
-        self.pos_emb = None
-
-    def get_mask(self, n, device):
-        if self.mask is not None and self.mask.shape[-1] >= n:
-            return self.mask[:n, :n].to(device)
-
-        mask = torch.ones((n, n), device=device, dtype=torch.bool).triu(1)
-        self.mask = mask
-        return mask
-
-    def get_rotary_embedding(self, n, device):
-        if self.pos_emb is not None and self.pos_emb.shape[-2] >= n:
-            return self.pos_emb[:n].to(device)
-
-        pos_emb = self.rotary_emb(n, device=device)
-        self.pos_emb = pos_emb
-        return pos_emb
-
-    def forward(self, x, attn_mask=None):
-        """
-        einstein notation
-        b - batch
-        h - heads
-        n, i, j - sequence length (base sequence length, source, target)
-        d - feature dimension
-        """
-
-        n, device, h = x.shape[1], x.device, self.heads
-
-        # pre layernorm
-
-        x = self.norm(x)
-
-        # attention queries, keys, values, and feedforward inner
-
-        q, k, v, ff = self.fused_attn_ff_proj(x).split(self.fused_dims, dim=-1)
-
-        # split heads
-        # they use multi-query single-key-value attention, yet another Noam Shazeer paper
-        # they found no performance loss past a certain scale, and more efficient decoding obviously
-        # https://arxiv.org/abs/1911.02150
-
-        q = rearrange(q, "b n (h d) -> b h n d", h=h)
-
-        # rotary embeddings
-
-        positions = self.get_rotary_embedding(n, device)
-        q, k = map(lambda t: apply_rotary_pos_emb(positions, t), (q, k))
-
-        # scale
-
-        q = q * self.scale
-
-        # similarity
-
-        sim = einsum("b h i d, b j d -> b h i j", q, k)
-
-        # causal mask
-
-        causal_mask = self.get_mask(n, device)
-        sim = sim.masked_fill(causal_mask, -torch.finfo(sim.dtype).max)
-
-        # extra attention mask - for masking out attention from text CLS token to padding
-
-        if exists(attn_mask):
-            attn_mask = rearrange(attn_mask, 'b i j -> b 1 i j')
-            sim = sim.masked_fill(~attn_mask, -torch.finfo(sim.dtype).max)
-
-        # attention
-
-        sim = sim - sim.amax(dim=-1, keepdim=True).detach()
-        attn = sim.softmax(dim=-1)
-
-        # aggregate values
-
-        out = einsum("b h i j, b j d -> b h i d", attn, v)
-
-        # merge heads
-
-        out = rearrange(out, "b h n d -> b n (h d)")
-        return self.attn_out(out) + self.ff_out(ff)
-    
-
-class CrossAttention(nn.Module):
-    def __init__(
-        self,
-        dim,
-        *,
-        context_dim=None,
-        dim_head=64,
-        heads=8,
-        parallel_ff=False,
-        ff_mult=4,
-        norm_context=False
-    ):
-        super().__init__()
-        self.heads = heads
-        self.scale = dim_head ** -0.5
-        inner_dim = heads * dim_head
-        context_dim = default(context_dim, dim)
-
-        self.norm = LayerNorm(dim)
-        self.context_norm = LayerNorm(context_dim) if norm_context else nn.Identity()
-
-        self.to_q = nn.Linear(dim, inner_dim, bias=False)
-        self.to_kv = nn.Linear(context_dim, dim_head * 2, bias=False)
-        self.to_out = nn.Linear(inner_dim, dim, bias=False)
-
-        # whether to have parallel feedforward
-
-        ff_inner_dim = ff_mult * dim
-
-        self.ff = nn.Sequential(
-            nn.Linear(dim, ff_inner_dim * 2, bias=False),
-            SwiGLU(),
-            nn.Linear(ff_inner_dim, dim, bias=False)
-        ) if parallel_ff else None
-
-    def forward(self, x, context):
-        """
-        einstein notation
-        b - batch
-        h - heads
-        n, i, j - sequence length (base sequence length, source, target)
-        d - feature dimension
-        """
-
-        # pre-layernorm, for queries and context
-
-        x = self.norm(x)
-        context = self.context_norm(context)
-
-        # get queries
-
-        q = self.to_q(x)
-        q = rearrange(q, 'b n (h d) -> b h n d', h = self.heads)
-
-        # scale
-
-        q = q * self.scale
-
-        # get key / values
-
-        k, v = self.to_kv(context).chunk(2, dim=-1)
-
-        # query / key similarity
-
-        sim = einsum('b h i d, b j d -> b h i j', q, k)
-
-        # attention
-
-        sim = sim - sim.amax(dim=-1, keepdim=True)
-        attn = sim.softmax(dim=-1)
-
-        # aggregate
-
-        out = einsum('b h i j, b j d -> b h i d', attn, v)
-
-        # merge and combine heads
-
-        out = rearrange(out, 'b h n d -> b n (h d)')
-        out = self.to_out(out)
-
-        # add parallel feedforward (for multimodal layers)
-
-        if exists(self.ff):
-            out = out + self.ff(x)
-
-        return out
-    
-
-class HeadAttention(nn.Module):
-    def __init__(
-        self,
-        dim,
-        *,
-        context_dim=None,
-        dim_head=64,
-        heads=8,
-        parallel_ff=False,
-        ff_mult=4,
-        norm_context=False
-    ):
-        super().__init__()
-        self.heads = heads
-        self.scale = dim_head ** -0.5
-        inner_dim = heads * dim_head
-        context_dim = default(context_dim, dim)
-
-        self.norm = LayerNorm(dim)
-        self.context_norm = LayerNorm(context_dim) if norm_context else nn.Identity()
-
-        self.to_q = nn.Linear(dim, inner_dim, bias=False)
-        self.to_kv = nn.Linear(context_dim, dim_head * 2, bias=False)
-        self.to_out = nn.Linear(inner_dim, dim, bias=False)
-
-        # whether to have parallel feedforward
-
-        ff_inner_dim = ff_mult * dim
-
-        self.ff = nn.Sequential(
-            nn.Linear(dim, ff_inner_dim * 2, bias=False),
-            SwiGLU(),
-            nn.Linear(ff_inner_dim, dim, bias=False)
-        ) if parallel_ff else None
-
-    def forward(self, x, context):
-        """
-        einstein notation
-        b - batch
-        h - heads
-        n, i, j - sequence length (base sequence length, source, target)
-        d - feature dimension
-        """
-
-        # pre-layernorm, for queries and context
-
-        x = self.norm(x)
-        context = self.context_norm(context)
-
-        # get queries
-
-        q = self.to_q(x)
-        q = rearrange(q, 'b n (h d) -> b h n d', h = self.heads)
-
-        # scale
-
-        q = q * self.scale
-
-        # get key / values
-
-        k, v = self.to_kv(context).chunk(2, dim=-1)
-
-        # query / key similarity
-
-        sim = einsum('b h i d, b j d -> b h i j', q, k)
-
-        # attention
-
-        sim = sim - sim.amax(dim=-1, keepdim=True)
-        attn = sim.softmax(dim=-1)
-
-        # aggregate
-
-        out = einsum('b h i j, b j d -> b h i d', attn, v)
-
-        # merge and combine heads
-
-        out = rearrange(out, 'b h n d -> b n (h d)')
-        out = self.to_out(out)
-
-        # add parallel feedforward (for multimodal layers)
-
-        if exists(self.ff):
-            out = out + self.ff(x)
-
-        return out
 
 class POI_LLM(nn.Module):
     def __init__(
@@ -522,9 +230,151 @@ class POI_LLM(nn.Module):
         return caption_loss + contrastive_loss
 
 
+
+class FusedAttentionBlock(nn.Module):
+    def __init__(self, dim_in, dim_out, head, ff_mult):
+        self.heads = heads
+        self.scale = 
+        
+        self.to_q = nn.Linear()
+
+        self.
+
+
+        self.feedforward = nn.Sequential(
+            nn.Linear(dim, ff_inner_dim * 2, bias=False),
+            SwiGLU(),
+            nn.Linear(ff_inner_dim, dim, bias=False)
+        )
+
+    def forward(self, x1, x2, x3, x4, x5, x6, y):
+        """ 
+        b - batch
+        d - feature dimension
+        """
+
+
+        x = self.norm(x)
+
+
+        q = self.to_q(x)
+        q = rearrange(q, 'b n (h d) -> b h n d', h = self.heads)
+
+        q = q * self.scale
+
+        k, v = self.to_kv(x).chunk(2, dim=-1)
+
+        sim = einsum('b h i d, b j d -> b h i j', q, k)
+
+        sim = sim - sim.amax(dim=-1, keepdim=True)
+        attn = sim.softmax(dim=-1)
+
+        out = einsum('b h i j, b j d -> b h i d', attn, v)
+        out = rearrange(out, 'b h n d -> b n (h d)')
+
+        out = self.to_out(out)
+
+        out = out + self.feedforward(x)
+
+        return out
+
+
+
+
+
+
+class CrossAttentionBlock(nn.Module):
+    def __init__(self, 
+                 dim,
+                 dim_fused, 
+                 dim_head=32, 
+                 heads=8, 
+                 ff_mult=4
+                 ):
+        super().__init__()
+        self.heads = heads
+        self.scale = dim_head ** -0.5
+        inner_dim = heads * dim_head
+        dim_fused = dim if dim_fused != None else 256
+
+        self.norm = LayerNorm(dim)
+        self.norm_ = LayerNorm(dim_fused) if dim_fused else nn.Identity()
+
+        self.to_q = nn.Linear(dim, inner_dim, bias=False)
+        self.to_kv = nn.Linear(dim_fused, dim_head * 2, bias=False)
+        self.to_out = nn.Linear(inner_dim, dim, bias=False)
+
+        # whether to have parallel feedforward
+
+        ff_inner_dim = ff_mult * dim
+
+        self.ff = nn.Sequential(
+            nn.Linear(dim, ff_inner_dim * 2, bias=False),
+            SwiGLU(),
+            nn.Linear(ff_inner_dim, dim, bias=False)
+        )
+
+    def forward(self, x, y):
+        """ 
+        b - batch
+        d - feature dimension
+        """
+        x = self.norm(x)
+        y = self.norm_(y)
+        
+
+        q = self.to_q(x)
+        q = rearrange(q, 'b n (h d) -> b h n d', h = self.heads)
+
+        q = q * self.scale
+
+        k, v = self.to_kv(y).chunk(2, dim=-1)
+
+        sim = einsum('b h i d, b j d -> b h i j', q, k)
+
+        sim = sim - sim.amax(dim=-1, keepdim=True)
+        attn = sim.softmax(dim=-1)
+
+        out = einsum('b h i j, b j d -> b h i d', attn, v)
+        out = rearrange(out, 'b h n d -> b n (h d)')
+
+        out = self.to_out(out)
+
+        out = out + self.feedforward(x)
+
+        return out
+    
+
+    
 class SelfAttentionBlock(nn.Module):
-    def __init__(self, dim, hidden_dim):
-        pass
+    def __init__(self, 
+                 dim, 
+                 dim_head=32, 
+                 heads=8, 
+                 ff_mult=4
+                 ):
+
+        super().__init__()
+        self.heads = heads
+        self.scale = dim_head ** -0.5
+
+        inner_dim = heads * dim_head
+
+        self.norm = LayerNorm(dim)
+
+        self.to_q = nn.Linear(dim, inner_dim, bias=False)
+        self.to_kv = nn.Linear(dim, dim_head * 2, bias=False)
+        self.to_out = nn.Linear(inner_dim, dim, bias=False)
+
+        # whether to have parallel feedforward
+
+        ff_inner_dim = ff_mult * dim
+
+        self.ff = nn.Sequential(
+            nn.Linear(dim, ff_inner_dim * 2, bias=False),
+            SwiGLU(),
+            nn.Linear(ff_inner_dim, dim, bias=False)
+        )
 
     def forward(self, x):
         """ 
@@ -532,8 +382,6 @@ class SelfAttentionBlock(nn.Module):
         d - feature dimension
         """
         x = self.norm(x)
-
-        x = x.unsqueeze(1) #b d -> b 1 d
 
         q = self.to_q(x)
         q = rearrange(q, 'b n (h d) -> b h n d', h = self.heads)
@@ -552,17 +400,41 @@ class SelfAttentionBlock(nn.Module):
 
         out = out.squeeze(1) # b 1 d -> b  d
         out = self.to_out(out)
+
+        out = out + self.feedforward(x)
+
+        return out
         
 
-        
-        
-class EmbeddingBlock(nn.Module):
-    def __init__(self, embed_path):
-        self.embed = torch.load(embed_path)
+class Embed2hidden(nn.Module):
+    def __init__(self, dim, hidden_dim):
+        super().__init__()
+        self.to_hidden = nn.Linear(dim, hidden_dim, bias=False)
 
     def forward(self, x):
-        return self.embed(x)
+        hidden = self.to_hidden(x)
+        return F.normalize(hidden, dim=-1)       
+        
+class EmbeddingBlock(nn.Module):
+    def __init__(self, hidden_dim=256, embed_path='', dim_reduct=True):
+        self.embed = torch.load(embed_path)
+        num, dim = self.embed.shape
 
+        self.embedding_layer = nn.Embedding(num, dim, _weight=self.embed)
+        
+        self.dim_reduct = dim_reduct
+        if self.dim_reduct: 
+            self.embed2hidden = Embed2hidden(self.dim_embed, dim)
+        else:
+            self.embed2hidden = nn.Identity()
+        
+
+    def forward(self, x):
+        with torch.no_grad():
+            x = self.embedding_layer(x)
+        out = self.embed2hidden(x)
+        return out
+ 
 class PoiEnhancer(nn.Module):
     def __init__(self, 
                  poi_repr_embedding_layer,
@@ -573,11 +445,20 @@ class PoiEnhancer(nn.Module):
         self.llm_layer1, self.llm_layer2, self.llm_layer3 = llm_embedding_layer_tuple
         self.poi_layer = poi_repr_embedding_layer
 
-        self.attention_block = 
+        self.EmbeddingBlock
 
-        self.cross_attention_block = 
+        self.attention_block1 = AttentionBlock(dim_in, dim_out, head, ff_mult)
+        self.attention_block2 = AttentionBlock()
+        self.attention_block3 = AttentionBlock()
 
-        self.fuse_attention_block = 
+        self.cross_attention_block12 = CrossAttentionBlock() 
+        self.cross_attention_block13 = CrossAttentionBlock() 
+        self.cross_attention_block21 = CrossAttentionBlock() 
+        self.cross_attention_block23 = CrossAttentionBlock() 
+        self.cross_attention_block31 = CrossAttentionBlock() 
+        self.cross_attention_block32 = CrossAttentionBlock() 
+
+        self.fused_attention_block = FusedAttentionBlock()
 
 
         
