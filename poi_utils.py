@@ -14,26 +14,26 @@ def weight_init(m):
         init.normal_(m.weight.data)
         if m.bias is not None:
             init.normal_(m.bias.data)
-    # elif isinstance(m, nn.Conv2d):
-    #     init.xavier_normal_(m.weight.data)
-    #     if m.bias is not None:
-    #         init.normal_(m.bias.data)
-    # elif isinstance(m, nn.Conv3d):
-    #     init.xavier_normal_(m.weight.data)
-    #     if m.bias is not None:
-    #         init.normal_(m.bias.data)
-    # elif isinstance(m, nn.ConvTranspose1d):
-    #     init.normal_(m.weight.data)
-    #     if m.bias is not None:
-    #         init.normal_(m.bias.data)
-    # elif isinstance(m, nn.ConvTranspose2d):
-    #     init.xavier_normal_(m.weight.data)
-    #     if m.bias is not None:
-    #         init.normal_(m.bias.data)
-    # elif isinstance(m, nn.ConvTranspose3d):
-    #     init.xavier_normal_(m.weight.data)
-    #     if m.bias is not None:
-    #         init.normal_(m.bias.data)
+    elif isinstance(m, nn.Conv2d):
+        init.xavier_normal_(m.weight.data)
+        if m.bias is not None:
+            init.normal_(m.bias.data)
+    elif isinstance(m, nn.Conv3d):
+        init.xavier_normal_(m.weight.data)
+        if m.bias is not None:
+            init.normal_(m.bias.data)
+    elif isinstance(m, nn.ConvTranspose1d):
+        init.normal_(m.weight.data)
+        if m.bias is not None:
+            init.normal_(m.bias.data)
+    elif isinstance(m, nn.ConvTranspose2d):
+        init.xavier_normal_(m.weight.data)
+        if m.bias is not None:
+            init.normal_(m.bias.data)
+    elif isinstance(m, nn.ConvTranspose3d):
+        init.xavier_normal_(m.weight.data)
+        if m.bias is not None:
+            init.normal_(m.bias.data)
     elif isinstance(m, nn.BatchNorm1d):
         init.normal_(m.weight.data, mean=1, std=0.02)
         init.constant_(m.bias.data, 0)
@@ -48,32 +48,32 @@ def weight_init(m):
         if m.bias is not None:
             init.normal_(m.bias.data)
         
-    # elif isinstance(m, nn.LSTM):
-    #     for param in m.parameters():
-    #         if len(param.shape) >= 2:
-    #             init.orthogonal_(param.data)
-    #         else:
-    #             init.normal_(param.data)
-    # elif isinstance(m, nn.LSTMCell):
-    #     for param in m.parameters():
-    #         if len(param.shape) >= 2:
-    #             init.orthogonal_(param.data)
-    #         else:
-    #             init.normal_(param.data)
-    # elif isinstance(m, nn.GRU):
-    #     for param in m.parameters():
-    #         if len(param.shape) >= 2:
-    #             init.orthogonal_(param.data)
-    #         else:
-    #             init.normal_(param.data)
-    # elif isinstance(m, nn.GRUCell):
-    #     for param in m.parameters():
-    #         if len(param.shape) >= 2:
-    #             init.orthogonal_(param.data)
-    #         else:
-    #             init.normal_(param.data)
-    # elif isinstance(m, nn.Embedding):
-    #     embed_size = m.weight.size(-1)
-    #     if embed_size > 0:
-    #         init_range = 0.5/m.weight.size(-1)
-    #         init.uniform_(m.weight.data, -init_range, init_range)
+    elif isinstance(m, nn.LSTM):
+        for param in m.parameters():
+            if len(param.shape) >= 2:
+                init.orthogonal_(param.data)
+            else:
+                init.normal_(param.data)
+    elif isinstance(m, nn.LSTMCell):
+        for param in m.parameters():
+            if len(param.shape) >= 2:
+                init.orthogonal_(param.data)
+            else:
+                init.normal_(param.data)
+    elif isinstance(m, nn.GRU):
+        for param in m.parameters():
+            if len(param.shape) >= 2:
+                init.orthogonal_(param.data)
+            else:
+                init.normal_(param.data)
+    elif isinstance(m, nn.GRUCell):
+        for param in m.parameters():
+            if len(param.shape) >= 2:
+                init.orthogonal_(param.data)
+            else:
+                init.normal_(param.data)
+    elif isinstance(m, nn.Embedding):
+        embed_size = m.weight.size(-1)
+        if embed_size > 0:
+            init_range = 0.5/m.weight.size(-1)
+            init.uniform_(m.weight.data, -init_range, init_range)
