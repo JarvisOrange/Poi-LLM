@@ -128,7 +128,7 @@ if __name__ == '__main__':
 
     args = create_args()
     device = torch.device("cuda:"+str(args.gpu) if torch.cuda.is_available() else "cpu")
-    name = args.gpu.NAME
+    name = args.NAME
 
     path1 = './Embed/Poi_Model_Embed/tale_256_ny/poi_repr/'
     path2 = './Embed/Result_Embed/NY/'
@@ -178,21 +178,21 @@ if __name__ == '__main__':
             optimizer.step()
             losses.append(loss.item())
             if (i + 1) % test_point == 0:
+                with torch.no_grad():
+                    pres_raw, labels = [], []
+                    for test_batch in next_batch(test_set, downstream_batch_size * 4):
+                        test_out, test_label = one_step(pre_model, predict_len, poi_embedding, num_loc, test_batch)
+                        pres_raw.append(test_out.detach().cpu())
+                        labels.append(test_label.detach().cpu())
+                    pres_raw, labels = torch.vstack(pres_raw), torch.hstack(labels)
+                    pres = pres_raw.argmax(-1)
 
-                pres_raw, labels = [], []
-                for test_batch in next_batch(test_set, downstream_batch_size * 4):
-                    test_out, test_label = one_step(pre_model, predict_len, poi_embedding, num_loc, test_batch)
-                    pres_raw.append(test_out.detach().cpu())
-                    labels.append(test_label.detach().cpu())
-                pres_raw, labels = torch.vstack(pres_raw), torch.hstack(labels)
-                pres = pres_raw.argmax(-1)
-
-                acc1,acc5 = accuracy(pres_raw,labels,topk=(1,5)) 
-                f1_micro, f1_macro = metrics.f1_score(labels.numpy(), pres.numpy(), average='micro'), metrics.f1_score(labels.numpy(), pres.numpy(), average='macro')
-                score_log.append([acc1, acc5, f1_micro, f1_macro])
-                print('Acc@1 %.6f, Acc@5 %.6f, F1-micro %.6f, F1-macro %.6f' % (
-                acc1, acc5, f1_micro, f1_macro))
-                best_acc1, best_acc5, best_f1_micro, best_f1_macro = np.max(score_log, axis=0)
+                    acc1,acc5 = accuracy(pres_raw,labels,topk=(1,5)) 
+                    f1_micro, f1_macro = metrics.f1_score(labels.numpy(), pres.numpy(), average='micro'), metrics.f1_score(labels.numpy(), pres.numpy(), average='macro')
+                    score_log.append([acc1, acc5, f1_micro, f1_macro])
+                    print('Acc@1 %.6f, Acc@5 %.6f, F1-micro %.6f, F1-macro %.6f' % (
+                    acc1, acc5, f1_micro, f1_macro))
+                    best_acc1, best_acc5, best_f1_micro, best_f1_macro = np.max(score_log, axis=0)
                 
         print('epoch {} complete! avg loss:{}'.format(epoch,np.mean(losses)))
 

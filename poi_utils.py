@@ -110,7 +110,7 @@ class PoiDataset(data.Dataset):
 class ContrastDataset(data.Dataset):
     def __init__(self,  path, device):
         df = pd.read_csv(path,sep=',', header=0, dtype={'anchor':int,'positive':int, 'negative':str})
-        df= df.sample(frac=0.01)
+        df= df.sample(frac=0.005)
         df['negative'] = df['negative'].apply(lambda x : eval(x))
         self.device = device
         self.data = df

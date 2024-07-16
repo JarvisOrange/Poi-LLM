@@ -389,7 +389,7 @@ if __name__ == "__main__":
 
     Model = PoiEnhancer(path1, path2, path3, path4, cross_layer_num=3).cuda(device)
     Model.train()
-    optimizer = torch.optim.AdamW(Model.parameters(), lr=5e-3, weight_decay=1e-3)
+    optimizer = torch.optim.AdamW(Model.parameters(), lr=1e-2, weight_decay=1e-3)
     # optimizer = torch.optim.SGD(Model.parameters(), lr=5e-2, weight_decay=1e-3)
 
     
@@ -412,8 +412,7 @@ if __name__ == "__main__":
             z = rearrange(z, 'b n d -> (b n) d')
             y = rearrange(y, 'b n d -> (b n) d')
 
-        
-
+    
             loss = nceloss(query_, positive_, negative) + simloss(z, y)
 
             optimizer.zero_grad()
@@ -428,7 +427,7 @@ if __name__ == "__main__":
         print('epoch %d, loss： %.4f' % (epoch+1,sum(l)/ len(l)))
        
 
-        if (epoch+1) % 10 == 0:
+        if (epoch+1) % 5 == 0:
             Model.eval()
             save_embed(Model, dataset, LLM, dim, poi_model, epoch+1, device)
             Model.train()

@@ -1,7 +1,11 @@
 #!/bin/bash
 
-n = 
+n="NY_llama2_multilayer_tale_256_Epoch_40"
 
-python python Downstream/poi_clf.py   --gpu NY --NAME $n
+python Downstream/poi_clf.py  --gpu 2 --NAME $n
 
-python python Downstream/poi_clf.py   --gpu NY --NAME $n
+echo "----------- task 1 done -----------"
+
+python Downstream/traj_next_pre.py   --gpu 2 --NAME $n
+
+echo "----------- task 2 done -----------"
