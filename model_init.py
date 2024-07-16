@@ -95,6 +95,8 @@ class CrossAttentionBlock(nn.Module):
         self.norm = LayerNorm(dim)
         self.norm_ = LayerNorm(dim) if dim_fused else nn.Identity()
 
+        self.norm_out = LayerNorm(dim_fused)
+
         self.to_q = nn.Linear(dim, inner_dim, bias=False)
         self.to_kv = nn.Linear(dim_fused, dim_head * 2, bias=False)
         self.to_out = nn.Linear(inner_dim, dim, bias=False)
@@ -109,6 +111,8 @@ class CrossAttentionBlock(nn.Module):
             nn.Linear(ff_inner_dim, dim, bias=False)
         )
 
+       
+
     def forward(self, x, y):
         """ 
         b - batch
@@ -118,7 +122,7 @@ class CrossAttentionBlock(nn.Module):
         x_ = x
 
         x = self.norm(x)
-        y= self.norm(y)
+        y = self.norm(y)
 
         
         q = self.to_q(x)
@@ -160,6 +164,8 @@ class SelfAttentionBlock(nn.Module):
         inner_dim = heads * dim_head
 
         self.norm = LayerNorm(dim)
+
+        self.norm_out = LayerNorm(dim)
 
         self.to_q = nn.Linear(dim, inner_dim, bias=False)
         self.to_kv = nn.Linear(dim, dim_head * 2, bias=False)
@@ -212,12 +218,7 @@ class SelfAttentionBlock(nn.Module):
 
 
         return out
-        
-
- 
-        
-
-
+    
     
 
 class FuseAttentionBlock(nn.Module):
@@ -284,7 +285,7 @@ class FuseAttentionBlock(nn.Module):
  
 
 class PoiEnhancer(nn.Module):
-    def __init__(self,  llm_e_path1, llm_e_path2, llm_e_path3, poi_e_path):
+    def __init__(self,  llm_e_path1, llm_e_path2, llm_e_path3, poi_e_path, cross_layer_num=1):
         
         super().__init__()
         
@@ -305,7 +306,13 @@ class PoiEnhancer(nn.Module):
 
         self.fuse_attention =  FuseAttentionBlock(dim=self.poi_e_dim, dim_fused= 2 * self.poi_e_dim)
 
-        self.cross_attention_block = CrossAttentionBlock(dim=self.poi_e_dim, dim_fused=self.poi_e_dim)
+        self.cross_layer_num = cross_layer_num
+
+        self.cross_attention_fusion = nn.ModuleList([])
+        for ind in range(cross_layer_num):
+            self.cross_attention_fusion.append(
+                CrossAttentionBlock(dim=self.poi_e_dim, dim_fused=self.poi_e_dim)
+            )
 
         self.apply(weight_init)
 
@@ -322,8 +329,6 @@ class PoiEnhancer(nn.Module):
 
         y = self.poi_layer(batch)
 
-
-
         x1 = self.attention_block1(llm_e1)
         x2 = self.attention_block2(llm_e2)
         x3 = self.attention_block3(llm_e3)
@@ -337,8 +342,11 @@ class PoiEnhancer(nn.Module):
 
         temp_out = coef[0] * out[0] + coef[1] * out[1] + coef[2] * out[2]
 
+        for cross_attention_fusion in self.cross_attention_fusion:
+            temp_out = cross_attention_fusion(temp_out, y)
 
-        z = self.cross_attention_block(temp_out, y)
+
+        z = temp_out
 
         
         return z, y
@@ -346,119 +354,10 @@ class PoiEnhancer(nn.Module):
 
 
 
-class ContrastDataset(data.Dataset):
-    def __init__(self,  path, device):
-        df = pd.read_csv(path,sep=',', header=0, dtype={'anchor':int,'positive':int, 'negative':str})
-        # df= df.sample(frac=0.01)
-        df['negative'] = df['negative'].apply(lambda x : eval(x))
-        self.device = device
-        self.data = df
-        self.data = self.data.values
 
-        
-    def __getitem__(self, index):
-        anchor, pos, negative = self.data[index]
-        data = [anchor, pos] + negative
-        data = torch.IntTensor(data).to(self.device)
-        
-        return data
+
     
-    def __len__(self):
-        return len(self.data)
 
-class PoiDataset(data.Dataset):
-    def __init__(self,  path, device):
-        df = pd.read_csv(path,sep=',', header=0, usecols=['geo_id','type'])
-        df = df[df['type']=='Point']
-        df = df.drop(['type'], axis=1)
-        first = df.iloc[0,0]
-        df['geo_id'] = df['geo_id'].apply(lambda x: x - first)
-
-        self.device = device
-        self.data = df
-        self.data = self.data.values
-
-        
-    def __getitem__(self, index):
-        data = self.data[index]
-        data = torch.IntTensor(data).to(self.device)
-        return data
-    
-    def __len__(self):
-        return len(self.data)
-
-class SimliarityLoss(nn.Module):
-    def __init__(self):
-        super(SimliarityLoss,self).__init__()
-
-    def forward(self, embed_new, st_embed):
-        tmp = torch.matmul(embed_new, embed_new.T)
-        tmp1 = torch.matmul(st_embed,st_embed.T)
-        size = tmp.shape[0]
-        return (self.cal(tmp1, tmp)) / size / size
-        
-        
-    def cal(self, m1, m2):
-        tmp = torch.abs(torch.cos(m1) - m2)
-        x = (torch.sum(tmp) -  torch.diag(tmp))/2
-        return torch.sum(x) + torch.sum(torch.diag(tmp))
-    
-def simloss(embed_new, st_embed):
-    x1 = F.cosine_similarity(embed_new.unsqueeze(1), embed_new.unsqueeze(0), dim=2)
-    x2 = F.cosine_similarity(st_embed.unsqueeze(1), st_embed.unsqueeze(0), dim=2)
-    loss = F.mse_loss(x1, x2)
-    
-    return loss   
-    
-def save_embed(Model, dataset, LLM, dim, poi_model, epoch, last=False):
-
-    LLM = 'TEST'
-    
-    if last:
-        name_embed = dataset + '_' + LLM + '_' + poi_model + '_'+ str(dim) + '_LAST.pt'
-
-        name_statedict = dataset + '_' + LLM + '_' + poi_model + '_'+ str(dim) + 'statedict_LAST.pt'
-    else: 
-        name_embed = dataset + '_' + LLM + '_' + poi_model + '_'+ str(dim) + '_Epoch_' +str(epoch) +'.pt'
-        
-        name_statedict = dataset + '_' + LLM + '_' + poi_model + '_'+ str(dim) +  '_Epoch_' +str(epoch) +'_statedict.pt'
-    
-    embed_path = './Embed/Result_Embed/'+ dataset +'/' 
-
-    model_path =  "./Model_state_dict_cache/" + dataset +'/'
-
-    if not os.path.exists(embed_path):
-        os.makedirs(embed_path)
-
-    if not os.path.exists(model_path):
-        os.makedirs(model_path)
-
-
-
-    torch.save({'model': Model.state_dict()}, model_path + name_statedict)
-
-    poi_dataset = PoiDataset('./Dataset/Foursquare_NY/ny.geo', device)
-    poi_dataloader = DataLoader(poi_dataset, batch_size = batch_size, shuffle=False)
-
-    result_embed = torch.empty((len(poi_dataset), 256)).cpu()
-    torch.cuda.empty_cache()
-    index = 0
-    with torch.no_grad():
-        for step, batch in enumerate(poi_dataloader):
-            
-            # batch = batch.unsqueeze(dim=1)
-            out = Model(batch)
-            out = out.squeeze(1)
-
-
-            if out.shape[0] !=  batch_size:
-                result_embed[step * batch_size :step * batch_size + out.shape[0],:] = out.cpu()
-                index +=  out.shape[0]
-            else:
-                result_embed[step * batch_size : (step +1)* batch_size,:] = out.cpu()
-                index +=  batch_size
-
-    torch.save(result_embed, embed_path + name_embed)
 
 if __name__ == "__main__":
 
@@ -469,30 +368,33 @@ if __name__ == "__main__":
 
     dataset= 'NY'
 
-    LLM = 'llama2'
+    LLM = 'llama2_multilayer'
+
+    train_data_name = dataset+'_train.csv'
 
     dim = 256
 
     poi_model = 'tale'
 
-    device = 'cuda:1'
+    device = 'cuda:0'
     batch_size = 128
     EPOCH = 100
 
-    train_dataset = ContrastDataset('./ContrastDataset/train.csv', device)
+
+    train_dataset = ContrastDataset('./ContrastDataset/' + train_data_name, device)
     train_dataloader = DataLoader(train_dataset, batch_size = batch_size, shuffle=True)
 
 
 
 
-    Model = PoiEnhancer(path1, path2, path3, path4).cuda(device)
+    Model = PoiEnhancer(path1, path2, path3, path4, cross_layer_num=3).cuda(device)
     Model.train()
-    optimizer = torch.optim.AdamW(Model.parameters(), lr=5e-2, weight_decay=1e-3)
+    optimizer = torch.optim.AdamW(Model.parameters(), lr=5e-3, weight_decay=1e-3)
     # optimizer = torch.optim.SGD(Model.parameters(), lr=5e-2, weight_decay=1e-3)
 
     
     nceloss = InfoNCE(temperature=0.1,reduction='mean',negative_mode='paired')
-    # simloss = SimliarityLoss()
+
 
     
     for epoch in range(EPOCH):
@@ -510,31 +412,31 @@ if __name__ == "__main__":
             z = rearrange(z, 'b n d -> (b n) d')
             y = rearrange(y, 'b n d -> (b n) d')
 
-            
-
+        
 
             loss = nceloss(query_, positive_, negative) + simloss(z, y)
 
-        
             optimizer.zero_grad()
 
-            # print(loss.item(), nceloss(query_, positive_, negative), simloss(z, y))
+            loss.backward()
+
+            optimizer.step()
 
             l.append(loss.item())
 
             
         print('epoch %d, loss： %.4f' % (epoch+1,sum(l)/ len(l)))
        
-    
-
 
         if (epoch+1) % 10 == 0:
             Model.eval()
-            save_embed(Model, dataset, LLM, dim, poi_model, epoch+1)
+            save_embed(Model, dataset, LLM, dim, poi_model, epoch+1, device)
             Model.train()
+
+        optimizer.zero_grad()
 
         #########save embed ################
     Model.eval()
-    save_embed(Model, dataset, LLM, dim, poi_model, epoch, last=True)
+    save_embed(Model, dataset, LLM, dim, poi_model, epoch+1, device, last=True)
 
 

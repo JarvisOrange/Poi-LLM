@@ -7,19 +7,39 @@ from sklearn import metrics
 from libcity_utils import next_batch
 from tqdm import tqdm
 
+import argparse
+
+def create_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--gpu", type=int, default=1, help="gpu")
+
+    parser.add_argument(
+        "--NAME",
+        type=str
+    )
+
+    
+
+    args = parser.parse_args()
+
+    return args
+
 embed_size = 256 # The size of poi embeddings. 128 or 256 in our exp.
 task_epoch = 5
-device = 'cuda:0'
 downstream_batch_size = 32
 
 if __name__ == '__main__':
+
+    args = create_args()
+    device = torch.device("cuda:"+str(args.gpu) if torch.cuda.is_available() else "cpu")
+    name = args.gpu.NAME
 
     # FIXME
     path1 = './Embed/Poi_Model_Embed/tale_256_ny/poi_repr/'
     path2 = './Embed/Result_Embed/NY/'
 
-    category = pd.read_csv(path1+'category.csv', usecols=['geo_id', 'category'])
-    inputs = torch.load(path2+'NY_llama2_tale_256_Epoch_10.pt').to(device)
+    category = pd.read_csv(path1 + 'category.csv', usecols=['geo_id', 'category'])
+    inputs = torch.load(path2 + name + '.pt').to(device)
     num_loc = len(category)
     labels=category.category.to_numpy()
     indices = list(range(num_loc))

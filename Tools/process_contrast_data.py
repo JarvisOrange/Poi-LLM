@@ -11,8 +11,8 @@ import os
 
 dataset_path_dict = {
     'NY':'./ContrastDataset/NY/',
-    'SG':'./Dataset/Foursquare_SG/sg.geo',
-    'TKY':'./Dataset/Foursquare_TKY/tky.geo',
+    'SG':'./ContrastDataset/SG/',
+    'TKY':'./ContrastDataset/TKY/',
 }
 
 
@@ -59,9 +59,9 @@ def process_contrast_data(dataset_name='NY'):
             negative = gen_contrast_train_data(positive, all_poi)
             train_data.append([anchor, p, negative] )
         
-
+    train_data_name  = dataset_name + '_train.csv'
     train_data_df  = pd.DataFrame(train_data, columns = ['anchor','positve','negative'])
-    train_data_df.to_csv("./ContrastDataset/train.csv",index=False, header=True, sep=',')
+    train_data_df.to_csv(train_data_name, index=False, header=True, sep=',')
     
 
-process_contrast_data('NY')
+process_contrast_data('SG')

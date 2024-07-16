@@ -102,4 +102,4 @@ def gen_seq_neighbor(dataset_name, window=2,   save_path="./ContrastDataset/"):
 
 
     
-gen_seq_neighbor('NY')
+gen_seq_neighbor('TKY')

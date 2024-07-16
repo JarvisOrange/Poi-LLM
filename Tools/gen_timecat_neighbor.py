@@ -85,4 +85,4 @@ def gen_timecat_neighbor(dataset_name, save_path="./ContrastDataset/"):
         
     
 
-gen_timecat_neighbor('NY')
+gen_timecat_neighbor('TKY')

@@ -92,7 +92,7 @@ def gen_poi_geoneighbor(dataset_name,  save_path="./ContrastDataset/"):
       
         
     
-gen_poi_geoneighbor('NY')
+gen_poi_geoneighbor('TKY')
 
     
         

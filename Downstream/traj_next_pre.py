@@ -10,11 +10,26 @@ from tqdm import tqdm
 
 embed_size = 256 # The size of poi embeddings. 128 or 256 in our exp.
 task_epoch = 100
-device = 'cuda:1'
 downstream_batch_size = 32
 pre_model_seq2seq = True
 predict_len = 1
 test_ratio = 0.4
+
+import argparse
+
+def create_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--gpu", type=int, default=1, help="gpu")
+
+    parser.add_argument(
+        "--NAME",
+        type=str
+    )
+
+    
+    args = parser.parse_args()
+
+    return args
 
 def seq2seq_forward(encoder, lstm_input, valid_len, pre_len):
     his_len = valid_len - pre_len
@@ -110,15 +125,22 @@ def one_step(pre_model, pre_len, embedding, num_loc, batch):
     return out, label
 
 if __name__ == '__main__':
+
+    args = create_args()
+    device = torch.device("cuda:"+str(args.gpu) if torch.cuda.is_available() else "cpu")
+    name = args.gpu.NAME
+
     path1 = './Embed/Poi_Model_Embed/tale_256_ny/poi_repr/'
-    path2 = './Embed/Result_Embed/'
+    path2 = './Embed/Result_Embed/NY/'
+
+    
     #FIXME
     category = pd.read_csv(path1+'category.csv', usecols=['geo_id'])
     
     train_set = torch.load(path1+'traj_train_set.pth')
     test_set = torch.load(path1+'traj_test_set.pth')
 
-    poi_embedding = torch.load(path2+'NY_llama2_tale_256.pt').to(device)
+    poi_embedding = torch.load(path2 + name +'.pt').to(device)
     
 
     #We have to remake the train set and test set
