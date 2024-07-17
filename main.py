@@ -69,9 +69,8 @@ def create_args():
 
     parser.add_argument(
         "--simple_dataset",
-        type=bool,
-        default=False,
-        help="depth of the unimodal transformer",
+        type=str,
+        default='False'
     )
 
     args = parser.parse_args()
