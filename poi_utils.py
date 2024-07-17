@@ -108,9 +108,10 @@ class PoiDataset(data.Dataset):
         return len(self.data)
     
 class ContrastDataset(data.Dataset):
-    def __init__(self,  path, device):
+    def __init__(self,  path, device, simple=False):
         df = pd.read_csv(path,sep=',', header=0, dtype={'anchor':int,'positive':int, 'negative':str})
-        df= df.sample(frac=0.005)
+        if simple:
+            df= df.sample(frac=0.005)
         df['negative'] = df['negative'].apply(lambda x : eval(x))
         self.device = device
         self.data = df

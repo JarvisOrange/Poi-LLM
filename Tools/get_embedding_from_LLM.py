@@ -79,6 +79,8 @@ def main():
     prompt_df = pd.read_csv(prompt_data_path, header=0)
     dataset_strings = list(prompt_df['prompt'])
 
+    
+
     tk_result = tokenizer.batch_encode_plus(
             dataset_strings,
             return_tensors='pt',
@@ -154,7 +156,7 @@ def main():
             }
         
         offset = 0
-        bs = 64
+        bs = 32
         layer_offsets = {l: 0 for l in layers}
         dataloader = DataLoader(tk_dataset['input_ids'], batch_size=bs, shuffle=False)
         

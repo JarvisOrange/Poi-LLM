@@ -285,7 +285,7 @@ class FuseAttentionBlock(nn.Module):
  
 
 class PoiEnhancer(nn.Module):
-    def __init__(self,  llm_e_path1, llm_e_path2, llm_e_path3, poi_e_path, cross_layer_num=1):
+    def __init__(self,  llm_e_path1, llm_e_path2, llm_e_path3, poi_e_path, cross_layer_num=1, dim=256):
         
         super().__init__()
         
@@ -293,7 +293,7 @@ class PoiEnhancer(nn.Module):
         self.llm_layer2 = EmbeddingBlock(embed_path = llm_e_path2)
         self.llm_layer3 = EmbeddingBlock(embed_path = llm_e_path3)
 
-        self.poi_layer = EmbeddingBlock(embed_path = poi_e_path, dim_reduct=False)
+        self.poi_layer = EmbeddingBlock(embed_path = poi_e_path, hidden_dim = dim, dim_reduct=False)
 
         self.llm_e_dim = self.llm_layer1.get_shape()[1]
         self.poi_e_dim = self.poi_layer.get_shape()[1]
@@ -357,85 +357,5 @@ class PoiEnhancer(nn.Module):
 
 
     
-
-
-if __name__ == "__main__":
-
-    path1 = "./Embed/LLM_Embed/NY/NY_llama2_time_LAST.pt"
-    path2 = "./Embed/LLM_Embed/NY/NY_llama2_address_LAST.pt"
-    path3 = "./Embed/LLM_Embed/NY/NY_llama2_cat_nearby_LAST.pt"
-    path4 = "./Embed/Poi_Model_Embed/tale_256_ny/poi_repr/poi_repr.pth"
-
-    dataset= 'NY'
-
-    LLM = 'llama2_multilayer'
-
-    train_data_name = dataset+'_train.csv'
-
-    dim = 256
-
-    poi_model = 'tale'
-
-    device = 'cuda:0'
-    batch_size = 128
-    EPOCH = 100
-
-
-    train_dataset = ContrastDataset('./ContrastDataset/' + train_data_name, device)
-    train_dataloader = DataLoader(train_dataset, batch_size = batch_size, shuffle=True)
-
-
-
-
-    Model = PoiEnhancer(path1, path2, path3, path4, cross_layer_num=3).cuda(device)
-    Model.train()
-    optimizer = torch.optim.AdamW(Model.parameters(), lr=1e-2, weight_decay=1e-3)
-    # optimizer = torch.optim.SGD(Model.parameters(), lr=5e-2, weight_decay=1e-3)
-
-    
-    nceloss = InfoNCE(temperature=0.1,reduction='mean',negative_mode='paired')
-
-
-    
-    for epoch in range(EPOCH):
-        l = []
-        for batch in tqdm(train_dataloader):
-            
-            z, y  = Model(batch)
-
-            query, positive, negative = z[:,0,:], z[:,1,:], z[:,1:,:]
-
-            
-            query_ = query.squeeze(1)
-            positive_ = positive.squeeze(1)
-
-            z = rearrange(z, 'b n d -> (b n) d')
-            y = rearrange(y, 'b n d -> (b n) d')
-
-    
-            loss = nceloss(query_, positive_, negative) + simloss(z, y)
-
-            optimizer.zero_grad()
-
-            loss.backward()
-
-            optimizer.step()
-
-            l.append(loss.item())
-
-            
-        print('epoch %d, loss： %.4f' % (epoch+1,sum(l)/ len(l)))
-       
-
-        if (epoch+1) % 5 == 0:
-            Model.eval()
-            save_embed(Model, dataset, LLM, dim, poi_model, epoch+1, device)
-            Model.train()
-
-        optimizer.zero_grad()
-
-        #########save embed ################
-    Model.eval()
-    save_embed(Model, dataset, LLM, dim, poi_model, epoch+1, device, last=True)
 
 

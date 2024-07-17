@@ -26,6 +26,19 @@ def create_args():
         type=str
     )
 
+    parser.add_argument(
+        "--POI_MODEL_NAME",
+        type=str
+    )
+
+    parser.add_argument(
+        "--dataset",
+        type=str,
+        default="NY",
+        choices=["NY","SG","TKY"],
+        help="which dataset",
+    )
+
     
     args = parser.parse_args()
 
@@ -130,8 +143,10 @@ if __name__ == '__main__':
     device = torch.device("cuda:"+str(args.gpu) if torch.cuda.is_available() else "cpu")
     name = args.NAME
 
-    path1 = './Embed/Poi_Model_Embed/tale_256_ny/poi_repr/'
-    path2 = './Embed/Result_Embed/NY/'
+    dataset = args.dataset
+
+    path1 = './Embed/Poi_Model_Embed/'+ args.POI_MODEL_NAME+'/poi_repr/'
+    path2 = './Embed/Result_Embed/' + dataset + '/'
 
     
     #FIXME
