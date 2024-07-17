@@ -30,6 +30,13 @@ def create_args():
         choices=["NY","SG","TKY"],
         help="which dataset",
     )
+    
+    parser.add_argument(
+        "--save_path"
+        type=str,
+        default=None,
+        help="Result save path",
+    )
 
     args = parser.parse_args()
 
@@ -108,7 +115,19 @@ if __name__ == '__main__':
         f1_micro, f1_macro = metrics.f1_score(test_labels, pres, average='micro'), metrics.f1_score(test_labels, pres, average='macro')
         score_log.append([acc, pre, recall, f1_micro, f1_macro])
     
-    best_acc, best_pre, best_recall, best_f1_micro, best_f1_macro = np.mean(score_log, axis=0)
+    mean_acc, mean_pre, mean_recall, mean_f1_micro, mean_f1_macro = np.mean(score_log, axis=0)
     print('Acc %.6f, Pre %.6f, Recall %.6f, F1-micro %.6f, F1-macro %.6f' % (
-        best_acc, best_pre, best_recall, best_f1_micro, best_f1_macro))
+        mean_acc, mean_pre, mean_recall, mean_f1_micro, mean_f1_macro))
+
+    if not args.save_path is None:
+        result = pd.DataFrame({
+            'name': args.NAME,
+            'accuracy': mean_acc,
+            'precision': mean_pre,
+            'recall': mean_recall,
+            'f1-micro': mean_f1_macro,
+            'f1-macro': mean_f1_macro,
+        }, index=[1])
+        result.to_csv(args.save_path, index=False)
+
     
