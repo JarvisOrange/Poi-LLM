@@ -38,7 +38,12 @@ def create_args():
         choices=["NY","SG","TKY"],
         help="which dataset",
     )
-
+    
+    parser.add_argument(
+        "--save_path"
+        type=str,
+        help="Result save path",
+    )
     
     args = parser.parse_args()
 
@@ -216,3 +221,13 @@ if __name__ == '__main__':
     print(
         'Acc1 %.6f %%, Acc5 %.6f %%, F1-micro %.6f, F1-macro %.6f' % (
             best_acc1, best_acc5, best_f1_micro, best_f1_macro))
+
+    if not args.save_path is None:
+        result = pd.DataFrame({
+            'name': args.NAME,
+            'accuracy1': best_acc1,
+            'accuracy5': best_acc5,
+            'f1-micro': best_f1_macro,
+            'f1-macro': best_f1_macro,
+        }, index=[1])
+        result.to_csv(output_path, index=False)
