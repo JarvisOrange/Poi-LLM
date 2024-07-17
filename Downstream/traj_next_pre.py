@@ -10,7 +10,7 @@ from tqdm import tqdm
 
 embed_size = 256 # The size of poi embeddings. 128 or 256 in our exp.
 task_epoch = 100
-downstream_batch_size = 32
+downstream_batch_size = 16
 pre_model_seq2seq = True
 predict_len = 1
 test_ratio = 0.4
