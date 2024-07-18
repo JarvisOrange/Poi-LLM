@@ -16,10 +16,27 @@ from einops import rearrange, repeat
 from torch.utils import data
 from torch.utils.data import DataLoader	
 from info_nce import InfoNCE, info_nce
+import torch.distributed as dist
 
 
 from poi_utils import *
 from model_init import *
+
+def setup(rank, world_size):
+    os.environ['MASTER_ADDR'] = 'localhost'
+
+    os.environ['MASTER_PORT'] = '12355'
+
+    dist.init_process_group("nccl", rank=rank, world_size=world_size)
+
+    torch.cuda.set_device(rank)
+
+def get_loader(train_data_name, simple_dataset, BATCH_SIZE, device, rank, world_size):
+    train_sampler = DistributedSampler(train_set, num_replicas=world_size, rank=rank)
+    train_dataset = ContrastDataset('./ContrastDataset/' + train_data_name, device, simple=simple_dataset)
+    train_dataloader = DataLoader(train_dataset, batch_size = BATCH_SIZE, shuffle=True, sample = train_)
+
+    return train_dataloader
 
 
 def create_args():

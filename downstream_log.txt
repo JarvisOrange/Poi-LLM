@@ -1,0 +1,304 @@
+Train set size: 25632, test set size: 17088
+Start training downstream model...
+Acc@1 0.051991, Acc@5 0.201325, F1-micro 0.000520, F1-macro 0.000016
+Acc@1 0.630524, Acc@5 2.119446, F1-micro 0.006305, F1-macro 0.000443
+epoch 0 complete! avg loss:11.562066227309266
+Acc@1 0.997777, Acc@5 3.126072, F1-micro 0.009978, F1-macro 0.000960
+Acc@1 1.773211, Acc@5 4.761009, F1-micro 0.017732, F1-macro 0.002334
+epoch 1 complete! avg loss:8.787718124603957
+Acc@1 2.357275, Acc@5 6.267630, F1-micro 0.023573, F1-macro 0.003231
+Acc@1 2.389354, Acc@5 6.722271, F1-micro 0.023894, F1-macro 0.004330
+epoch 2 complete! avg loss:7.1785174673713845
+Acc@1 3.197973, Acc@5 8.270926, F1-micro 0.031980, F1-macro 0.005705
+Acc@1 3.414785, Acc@5 8.676895, F1-micro 0.034148, F1-macro 0.006899
+epoch 3 complete! avg loss:5.915207910031713
+Acc@1 3.809692, Acc@5 9.546354, F1-micro 0.038097, F1-macro 0.007687
+Acc@1 3.907037, Acc@5 9.827325, F1-micro 0.039070, F1-macro 0.008150
+epoch 4 complete! avg loss:4.791013738338123
+Acc@1 4.306368, Acc@5 10.491035, F1-micro 0.043064, F1-macro 0.008538
+Acc@1 4.232254, Acc@5 10.163605, F1-micro 0.042323, F1-macro 0.009366
+epoch 5 complete! avg loss:3.9690692280413358
+Acc@1 4.737780, Acc@5 11.258725, F1-micro 0.047378, F1-macro 0.009896
+Acc@1 4.530923, Acc@5 10.726651, F1-micro 0.045309, F1-macro 0.009736
+epoch 6 complete! avg loss:3.4165875433982533
+Acc@1 4.996626, Acc@5 11.591686, F1-micro 0.049966, F1-macro 0.010053
+Acc@1 4.826274, Acc@5 11.168018, F1-micro 0.048263, F1-macro 0.010410
+epoch 7 complete! avg loss:2.9632397510585715
+Acc@1 5.283127, Acc@5 11.896993, F1-micro 0.052831, F1-macro 0.011058
+Acc@1 4.909238, Acc@5 11.273106, F1-micro 0.049092, F1-macro 0.010498
+epoch 8 complete! avg loss:2.618777996331416
+Acc@1 5.082909, Acc@5 11.357175, F1-micro 0.050829, F1-macro 0.010338
+Acc@1 4.945742, Acc@5 11.305184, F1-micro 0.049457, F1-macro 0.010670
+epoch 9 complete! avg loss:2.3682633992214774
+Acc@1 5.175828, Acc@5 11.630403, F1-micro 0.051758, F1-macro 0.010966
+Acc@1 5.122731, Acc@5 11.458944, F1-micro 0.051227, F1-macro 0.010707
+epoch 10 complete! avg loss:2.1673899850297658
+Acc@1 5.226712, Acc@5 11.549651, F1-micro 0.052267, F1-macro 0.011076
+Acc@1 5.051935, Acc@5 11.372662, F1-micro 0.050519, F1-macro 0.011614
+epoch 11 complete! avg loss:1.9974099512999126
+Acc@1 5.256579, Acc@5 11.757613, F1-micro 0.052566, F1-macro 0.011404
+Acc@1 5.022069, Acc@5 11.284167, F1-micro 0.050221, F1-macro 0.011245
+epoch 12 complete! avg loss:1.8647893056292064
+Acc@1 5.301932, Acc@5 11.870444, F1-micro 0.053019, F1-macro 0.011315
+Acc@1 5.065209, Acc@5 11.375980, F1-micro 0.050652, F1-macro 0.011318
+epoch 13 complete! avg loss:1.7640531919198983
+Acc@1 5.207907, Acc@5 11.455626, F1-micro 0.052079, F1-macro 0.011053
+Acc@1 5.020962, Acc@5 11.238813, F1-micro 0.050210, F1-macro 0.011255
+epoch 14 complete! avg loss:1.660819126983707
+Acc@1 5.350605, Acc@5 11.791905, F1-micro 0.053506, F1-macro 0.011482
+Acc@1 4.992201, Acc@5 11.258725, F1-micro 0.049922, F1-macro 0.011305
+epoch 15 complete! avg loss:1.6010218462470764
+Acc@1 5.314101, Acc@5 11.724428, F1-micro 0.053141, F1-macro 0.011656
+Acc@1 5.335118, Acc@5 11.694561, F1-micro 0.053351, F1-macro 0.011845
+epoch 16 complete! avg loss:1.5314045583227005
+Acc@1 5.324056, Acc@5 11.732171, F1-micro 0.053241, F1-macro 0.011466
+Acc@1 5.346180, Acc@5 11.601642, F1-micro 0.053462, F1-macro 0.012006
+epoch 17 complete! avg loss:1.4690989270787709
+Acc@1 5.145961, Acc@5 11.422441, F1-micro 0.051460, F1-macro 0.011025
+Acc@1 5.399277, Acc@5 11.665800, F1-micro 0.053993, F1-macro 0.011673
+epoch 18 complete! avg loss:1.4016915071434743
+Acc@1 5.485559, Acc@5 11.945664, F1-micro 0.054856, F1-macro 0.011462
+Acc@1 5.248836, Acc@5 11.630403, F1-micro 0.052488, F1-macro 0.011951
+epoch 19 complete! avg loss:1.3504123363490408
+Acc@1 5.467860, Acc@5 11.773100, F1-micro 0.054679, F1-macro 0.011698
+Acc@1 5.193527, Acc@5 11.377087, F1-micro 0.051935, F1-macro 0.011979
+epoch 20 complete! avg loss:1.3110120380564725
+Acc@1 5.451267, Acc@5 11.966681, F1-micro 0.054513, F1-macro 0.011708
+Acc@1 5.270959, Acc@5 11.656951, F1-micro 0.052710, F1-macro 0.011477
+epoch 21 complete! avg loss:1.2585415596074974
+Acc@1 5.475603, Acc@5 11.830622, F1-micro 0.054756, F1-macro 0.011579
+Acc@1 5.372728, Acc@5 11.815135, F1-micro 0.053727, F1-macro 0.012317
+epoch 22 complete! avg loss:1.2186633337861144
+Acc@1 5.384896, Acc@5 11.794117, F1-micro 0.053849, F1-macro 0.011249
+Acc@1 5.483346, Acc@5 11.800755, F1-micro 0.054833, F1-macro 0.012151
+epoch 23 complete! avg loss:1.1735122778293643
+Acc@1 5.320738, Acc@5 11.828409, F1-micro 0.053207, F1-macro 0.011754
+Acc@1 5.328481, Acc@5 11.747658, F1-micro 0.053285, F1-macro 0.011785
+epoch 24 complete! avg loss:1.1445029607872839
+Acc@1 5.505470, Acc@5 11.954514, F1-micro 0.055055, F1-macro 0.011530
+Acc@1 5.468966, Acc@5 11.788587, F1-micro 0.054690, F1-macro 0.012087
+epoch 25 complete! avg loss:1.0982939342360074
+Acc@1 5.413657, Acc@5 11.887036, F1-micro 0.054137, F1-macro 0.011491
+Acc@1 5.324056, Acc@5 11.762038, F1-micro 0.053241, F1-macro 0.011595
+epoch 26 complete! avg loss:1.064070188941506
+Acc@1 5.530912, Acc@5 11.835046, F1-micro 0.055309, F1-macro 0.011720
+Acc@1 5.507682, Acc@5 11.749870, F1-micro 0.055077, F1-macro 0.012592
+epoch 27 complete! avg loss:1.0347840659943561
+Acc@1 5.537549, Acc@5 11.661375, F1-micro 0.055375, F1-macro 0.011836
+Acc@1 5.514319, Acc@5 11.993230, F1-micro 0.055143, F1-macro 0.012695
+epoch 28 complete! avg loss:0.9929453278525492
+Acc@1 5.525382, Acc@5 11.905842, F1-micro 0.055254, F1-macro 0.012158
+Acc@1 5.455692, Acc@5 11.599429, F1-micro 0.054557, F1-macro 0.012098
+epoch 29 complete! avg loss:0.9671391697040063
+Acc@1 5.325162, Acc@5 11.473325, F1-micro 0.053252, F1-macro 0.011751
+Acc@1 5.429143, Acc@5 11.854958, F1-micro 0.054291, F1-macro 0.012474
+epoch 30 complete! avg loss:0.9310534548260895
+Acc@1 5.429143, Acc@5 11.710048, F1-micro 0.054291, F1-macro 0.011627
+Acc@1 5.454586, Acc@5 11.797436, F1-micro 0.054546, F1-macro 0.011767
+epoch 31 complete! avg loss:0.9189807438336954
+Acc@1 5.430250, Acc@5 11.768675, F1-micro 0.054302, F1-macro 0.011780
+Acc@1 5.419188, Acc@5 11.633721, F1-micro 0.054192, F1-macro 0.012442
+epoch 32 complete! avg loss:0.8929574779338307
+Acc@1 5.326269, Acc@5 11.441245, F1-micro 0.053263, F1-macro 0.011632
+Acc@1 5.488877, Acc@5 11.777525, F1-micro 0.054889, F1-macro 0.012203
+epoch 33 complete! avg loss:0.8625644642520189
+Acc@1 5.381577, Acc@5 11.747658, F1-micro 0.053816, F1-macro 0.011740
+Acc@1 5.513213, Acc@5 11.707835, F1-micro 0.055132, F1-macro 0.012473
+epoch 34 complete! avg loss:0.831797616609771
+Acc@1 5.507682, Acc@5 11.822878, F1-micro 0.055077, F1-macro 0.011771
+Acc@1 5.517638, Acc@5 11.765357, F1-micro 0.055176, F1-macro 0.012095
+epoch 35 complete! avg loss:0.8313590655296335
+Acc@1 5.440206, Acc@5 11.675756, F1-micro 0.054402, F1-macro 0.011722
+Acc@1 5.474497, Acc@5 11.625978, F1-micro 0.054745, F1-macro 0.012314
+epoch 36 complete! avg loss:0.8006672952300898
+Acc@1 5.331800, Acc@5 11.676862, F1-micro 0.053318, F1-macro 0.011547
+Acc@1 5.571841, Acc@5 11.823984, F1-micro 0.055718, F1-macro 0.012774
+epoch 37 complete! avg loss:0.7924279823815554
+Acc@1 5.507682, Acc@5 11.633721, F1-micro 0.055077, F1-macro 0.012342
+Acc@1 5.586221, Acc@5 11.833940, F1-micro 0.055862, F1-macro 0.012523
+epoch 38 complete! avg loss:0.7753958204637902
+Acc@1 5.473391, Acc@5 11.733277, F1-micro 0.054734, F1-macro 0.011836
+Acc@1 5.425825, Acc@5 11.762038, F1-micro 0.054258, F1-macro 0.012385
+epoch 39 complete! avg loss:0.7500615301408273
+Acc@1 5.522063, Acc@5 11.918010, F1-micro 0.055221, F1-macro 0.012116
+Acc@1 5.628256, Acc@5 11.860488, F1-micro 0.056283, F1-macro 0.012238
+epoch 40 complete! avg loss:0.7457647131344353
+Acc@1 5.472285, Acc@5 11.723322, F1-micro 0.054723, F1-macro 0.011625
+Acc@1 5.466754, Acc@5 11.840577, F1-micro 0.054668, F1-macro 0.012086
+epoch 41 complete! avg loss:0.7346916189289346
+Acc@1 5.555248, Acc@5 11.914691, F1-micro 0.055552, F1-macro 0.012273
+Acc@1 5.544187, Acc@5 11.822878, F1-micro 0.055442, F1-macro 0.012356
+epoch 42 complete! avg loss:0.7179310081594074
+Acc@1 5.580690, Acc@5 11.816241, F1-micro 0.055807, F1-macro 0.012220
+Acc@1 5.664761, Acc@5 12.002080, F1-micro 0.056648, F1-macro 0.012670
+epoch 43 complete! avg loss:0.7088109214049526
+Acc@1 5.575160, Acc@5 11.839471, F1-micro 0.055752, F1-macro 0.012079
+Acc@1 5.545293, Acc@5 11.860488, F1-micro 0.055453, F1-macro 0.012124
+epoch 44 complete! avg loss:0.6981791744262129
+Acc@1 5.422506, Acc@5 11.721109, F1-micro 0.054225, F1-macro 0.011743
+Acc@1 5.527594, Acc@5 11.673544, F1-micro 0.055276, F1-macro 0.012152
+epoch 45 complete! avg loss:0.6886773178500406
+Acc@1 5.647061, Acc@5 11.894780, F1-micro 0.056471, F1-macro 0.012193
+Acc@1 5.412551, Acc@5 11.683499, F1-micro 0.054126, F1-macro 0.012149
+epoch 46 complete! avg loss:0.6774061436389344
+Acc@1 5.506576, Acc@5 11.697880, F1-micro 0.055066, F1-macro 0.012107
+Acc@1 5.488877, Acc@5 11.860488, F1-micro 0.054889, F1-macro 0.011752
+epoch 47 complete! avg loss:0.6702260733878568
+Acc@1 5.621619, Acc@5 11.851639, F1-micro 0.056216, F1-macro 0.012124
+Acc@1 5.580690, Acc@5 11.783055, F1-micro 0.055807, F1-macro 0.011897
+epoch 48 complete! avg loss:0.665840259298552
+Acc@1 5.571841, Acc@5 11.942346, F1-micro 0.055718, F1-macro 0.012098
+Acc@1 5.465648, Acc@5 11.815135, F1-micro 0.054656, F1-macro 0.011833
+epoch 49 complete! avg loss:0.6574103786760055
+Acc@1 5.488877, Acc@5 11.763144, F1-micro 0.054889, F1-macro 0.011568
+Acc@1 5.485559, Acc@5 11.680181, F1-micro 0.054856, F1-macro 0.012163
+epoch 50 complete! avg loss:0.6532004450897823
+Acc@1 5.586221, Acc@5 11.951196, F1-micro 0.055862, F1-macro 0.012002
+Acc@1 5.505470, Acc@5 11.723322, F1-micro 0.055055, F1-macro 0.012383
+epoch 51 complete! avg loss:0.6430881624034468
+Acc@1 5.620513, Acc@5 11.843896, F1-micro 0.056205, F1-macro 0.012198
+Acc@1 5.496621, Acc@5 11.663588, F1-micro 0.054966, F1-macro 0.011884
+epoch 52 complete! avg loss:0.6345796213530646
+Acc@1 5.600602, Acc@5 11.806286, F1-micro 0.056006, F1-macro 0.012013
+Acc@1 5.605027, Acc@5 11.852745, F1-micro 0.056050, F1-macro 0.012767
+epoch 53 complete! avg loss:0.6367034647757939
+Acc@1 5.418082, Acc@5 11.562925, F1-micro 0.054181, F1-macro 0.011826
+Acc@1 5.491090, Acc@5 11.665800, F1-micro 0.054911, F1-macro 0.012076
+epoch 54 complete! avg loss:0.6284889056441489
+Acc@1 5.524275, Acc@5 11.871551, F1-micro 0.055243, F1-macro 0.011823
+Acc@1 5.449055, Acc@5 11.800755, F1-micro 0.054491, F1-macro 0.012305
+epoch 55 complete! avg loss:0.6135853403125809
+Acc@1 5.590646, Acc@5 11.791905, F1-micro 0.055906, F1-macro 0.012012
+Acc@1 5.564098, Acc@5 11.939028, F1-micro 0.055641, F1-macro 0.012543
+epoch 56 complete! avg loss:0.6156544335670164
+Acc@1 5.459011, Acc@5 11.646996, F1-micro 0.054590, F1-macro 0.011888
+Acc@1 5.614982, Acc@5 11.894780, F1-micro 0.056150, F1-macro 0.012273
+epoch 57 complete! avg loss:0.6044664090259766
+Acc@1 5.582903, Acc@5 11.783055, F1-micro 0.055829, F1-macro 0.011531
+Acc@1 5.520957, Acc@5 11.582836, F1-micro 0.055210, F1-macro 0.012187
+epoch 58 complete! avg loss:0.6078310641651966
+Acc@1 5.548611, Acc@5 11.753189, F1-micro 0.055486, F1-macro 0.011867
+Acc@1 5.536443, Acc@5 11.788587, F1-micro 0.055364, F1-macro 0.012479
+epoch 59 complete! avg loss:0.5954017340532328
+Acc@1 5.519850, Acc@5 11.804073, F1-micro 0.055199, F1-macro 0.011669
+Acc@1 5.439099, Acc@5 11.475537, F1-micro 0.054391, F1-macro 0.012040
+epoch 60 complete! avg loss:0.5981800455353531
+Acc@1 5.501045, Acc@5 11.818454, F1-micro 0.055010, F1-macro 0.011589
+Acc@1 5.644849, Acc@5 11.894780, F1-micro 0.056448, F1-macro 0.012559
+epoch 61 complete! avg loss:0.5902461905948604
+Acc@1 5.474497, Acc@5 11.592793, F1-micro 0.054745, F1-macro 0.012277
+Acc@1 5.606133, Acc@5 11.832834, F1-micro 0.056061, F1-macro 0.012877
+epoch 62 complete! avg loss:0.5823511483843035
+Acc@1 5.572947, Acc@5 11.989912, F1-micro 0.055729, F1-macro 0.011852
+Acc@1 5.655911, Acc@5 11.705623, F1-micro 0.056559, F1-macro 0.012667
+epoch 63 complete! avg loss:0.5800024672003274
+Acc@1 5.644849, Acc@5 11.825090, F1-micro 0.056448, F1-macro 0.011709
+Acc@1 5.640424, Acc@5 11.726641, F1-micro 0.056404, F1-macro 0.012552
+epoch 64 complete! avg loss:0.5765970533855548
+Acc@1 5.654805, Acc@5 11.909161, F1-micro 0.056548, F1-macro 0.012129
+Acc@1 5.598390, Acc@5 11.708941, F1-micro 0.055984, F1-macro 0.012452
+epoch 65 complete! avg loss:0.5755497091630015
+Acc@1 5.733344, Acc@5 11.717791, F1-micro 0.057333, F1-macro 0.012124
+Acc@1 5.572947, Acc@5 11.816241, F1-micro 0.055729, F1-macro 0.012155
+epoch 66 complete! avg loss:0.5617132778471329
+Acc@1 5.426931, Acc@5 11.726641, F1-micro 0.054269, F1-macro 0.011824
+Acc@1 5.514319, Acc@5 11.686818, F1-micro 0.055143, F1-macro 0.012084
+epoch 67 complete! avg loss:0.5646363965255417
+Acc@1 5.620513, Acc@5 11.869338, F1-micro 0.056205, F1-macro 0.011834
+Acc@1 5.752149, Acc@5 12.086149, F1-micro 0.057521, F1-macro 0.012283
+epoch 68 complete! avg loss:0.5621994170121913
+Acc@1 5.661442, Acc@5 11.925754, F1-micro 0.056614, F1-macro 0.011920
+Acc@1 5.485559, Acc@5 11.690136, F1-micro 0.054856, F1-macro 0.012066
+epoch 69 complete! avg loss:0.5590667511184192
+Acc@1 5.485559, Acc@5 11.645889, F1-micro 0.054856, F1-macro 0.011956
+Acc@1 5.611664, Acc@5 11.818454, F1-micro 0.056117, F1-macro 0.012656
+epoch 70 complete! avg loss:0.5561933787667498
+Acc@1 5.606133, Acc@5 11.794117, F1-micro 0.056061, F1-macro 0.012224
+Acc@1 5.714539, Acc@5 11.822878, F1-micro 0.057145, F1-macro 0.012265
+epoch 71 complete! avg loss:0.5496226893540254
+Acc@1 5.493302, Acc@5 11.638145, F1-micro 0.054933, F1-macro 0.011714
+Acc@1 5.416975, Acc@5 11.652526, F1-micro 0.054170, F1-macro 0.012422
+epoch 72 complete! avg loss:0.5474265456157789
+Acc@1 5.631575, Acc@5 11.689030, F1-micro 0.056316, F1-macro 0.012065
+Acc@1 5.559673, Acc@5 11.613810, F1-micro 0.055597, F1-macro 0.012402
+epoch 73 complete! avg loss:0.5442184355021565
+Acc@1 5.574053, Acc@5 11.654738, F1-micro 0.055741, F1-macro 0.011837
+Acc@1 5.696840, Acc@5 11.878187, F1-micro 0.056968, F1-macro 0.012368
+epoch 74 complete! avg loss:0.5345044629822733
+Acc@1 5.630469, Acc@5 11.775312, F1-micro 0.056305, F1-macro 0.011805
+Acc@1 5.482240, Acc@5 11.588367, F1-micro 0.054822, F1-macro 0.012339
+epoch 75 complete! avg loss:0.5445962043434902
+Acc@1 5.575160, Acc@5 11.565138, F1-micro 0.055752, F1-macro 0.011922
+Acc@1 5.508789, Acc@5 11.724428, F1-micro 0.055088, F1-macro 0.012115
+epoch 76 complete! avg loss:0.5362499669384905
+Acc@1 5.658123, Acc@5 11.812922, F1-micro 0.056581, F1-macro 0.012586
+Acc@1 5.578478, Acc@5 11.570668, F1-micro 0.055785, F1-macro 0.012630
+epoch 77 complete! avg loss:0.5360503509343042
+Acc@1 5.477816, Acc@5 11.734384, F1-micro 0.054778, F1-macro 0.011858
+Acc@1 5.739981, Acc@5 11.966681, F1-micro 0.057400, F1-macro 0.012499
+epoch 78 complete! avg loss:0.5295295741702064
+Acc@1 5.691309, Acc@5 11.926859, F1-micro 0.056913, F1-macro 0.011682
+Acc@1 5.602814, Acc@5 11.862700, F1-micro 0.056028, F1-macro 0.011952
+epoch 79 complete! avg loss:0.5340423283775275
+Acc@1 5.628256, Acc@5 11.830622, F1-micro 0.056283, F1-macro 0.011975
+Acc@1 5.617195, Acc@5 11.877081, F1-micro 0.056172, F1-macro 0.012553
+epoch 80 complete! avg loss:0.5272456492052021
+Acc@1 5.612770, Acc@5 11.631509, F1-micro 0.056128, F1-macro 0.011599
+Acc@1 5.597283, Acc@5 11.793012, F1-micro 0.055973, F1-macro 0.012409
+epoch 81 complete! avg loss:0.5240205582370807
+Acc@1 5.471179, Acc@5 11.541908, F1-micro 0.054712, F1-macro 0.011510
+Acc@1 5.544187, Acc@5 11.559607, F1-micro 0.055442, F1-macro 0.012017
+epoch 82 complete! avg loss:0.5220768390997742
+Acc@1 5.614982, Acc@5 11.750977, F1-micro 0.056150, F1-macro 0.011937
+Acc@1 5.599495, Acc@5 11.711154, F1-micro 0.055995, F1-macro 0.012017
+epoch 83 complete! avg loss:0.5159257450344485
+Acc@1 5.591753, Acc@5 11.884825, F1-micro 0.055918, F1-macro 0.011939
+Acc@1 5.571841, Acc@5 11.646996, F1-micro 0.055718, F1-macro 0.012341
+epoch 84 complete! avg loss:0.5242630269799321
+Acc@1 5.672503, Acc@5 11.784162, F1-micro 0.056725, F1-macro 0.011786
+Acc@1 5.485559, Acc@5 11.557394, F1-micro 0.054856, F1-macro 0.011881
+epoch 85 complete! avg loss:0.5130818570881487
+Acc@1 5.672503, Acc@5 11.852745, F1-micro 0.056725, F1-macro 0.012100
+Acc@1 5.618301, Acc@5 11.766463, F1-micro 0.056183, F1-macro 0.012428
+epoch 86 complete! avg loss:0.5155732384772411
+Acc@1 5.637106, Acc@5 11.821772, F1-micro 0.056371, F1-macro 0.011968
+Acc@1 5.626044, Acc@5 11.722216, F1-micro 0.056260, F1-macro 0.012336
+epoch 87 complete! avg loss:0.5140373751465301
+Acc@1 5.673610, Acc@5 11.832834, F1-micro 0.056736, F1-macro 0.011730
+Acc@1 5.561885, Acc@5 11.670225, F1-micro 0.055619, F1-macro 0.012065
+epoch 88 complete! avg loss:0.5064313773608786
+Acc@1 5.503258, Acc@5 11.671331, F1-micro 0.055033, F1-macro 0.011498
+Acc@1 5.554142, Acc@5 11.704516, F1-micro 0.055541, F1-macro 0.012192
+epoch 89 complete! avg loss:0.5147031344608235
+Acc@1 5.716751, Acc@5 11.996549, F1-micro 0.057168, F1-macro 0.011862
+Acc@1 5.571841, Acc@5 11.654738, F1-micro 0.055718, F1-macro 0.012262
+epoch 90 complete! avg loss:0.5081043928796507
+Acc@1 5.541974, Acc@5 11.828409, F1-micro 0.055431, F1-macro 0.011604
+Acc@1 5.702371, Acc@5 11.965576, F1-micro 0.057024, F1-macro 0.012215
+epoch 91 complete! avg loss:0.509830512093629
+Acc@1 5.760998, Acc@5 12.075088, F1-micro 0.057610, F1-macro 0.012020
+Acc@1 5.665866, Acc@5 11.915797, F1-micro 0.056659, F1-macro 0.012337
+epoch 92 complete! avg loss:0.5048291698381882
+Acc@1 5.637106, Acc@5 11.943452, F1-micro 0.056371, F1-macro 0.011916
+Acc@1 5.475603, Acc@5 11.728852, F1-micro 0.054756, F1-macro 0.011734
+epoch 93 complete! avg loss:0.5050447996329056
+Acc@1 5.578478, Acc@5 11.768675, F1-micro 0.055785, F1-macro 0.012002
+Acc@1 5.462329, Acc@5 11.705623, F1-micro 0.054623, F1-macro 0.012233
+epoch 94 complete! avg loss:0.500477741201514
+Acc@1 5.540868, Acc@5 11.832834, F1-micro 0.055409, F1-macro 0.011974
+Acc@1 5.582903, Acc@5 11.720003, F1-micro 0.055829, F1-macro 0.012217
+epoch 95 complete! avg loss:0.5043559811193119
+Acc@1 5.603920, Acc@5 11.760932, F1-micro 0.056039, F1-macro 0.011816
+Acc@1 5.420294, Acc@5 11.583942, F1-micro 0.054203, F1-macro 0.012391
+epoch 96 complete! avg loss:0.5058666086626633
+Acc@1 5.546399, Acc@5 11.795223, F1-micro 0.055464, F1-macro 0.012060
+Acc@1 5.560779, Acc@5 11.795223, F1-micro 0.055608, F1-macro 0.012637
+epoch 97 complete! avg loss:0.4966638656763288
+Acc@1 5.541974, Acc@5 11.752083, F1-micro 0.055420, F1-macro 0.011989
+Acc@1 5.567416, Acc@5 11.791905, F1-micro 0.055663, F1-macro 0.012028
+epoch 98 complete! avg loss:0.4994147658236464
+Acc@1 5.551930, Acc@5 11.689030, F1-micro 0.055519, F1-macro 0.011911
+Acc@1 5.545293, Acc@5 11.621553, F1-micro 0.055453, F1-macro 0.011830
+epoch 99 complete! avg loss:0.4928787128927742
+Finished Evaluation.
+Acc1 5.760998 %, Acc5 12.086149 %, F1-micro 0.057610, F1-macro 0.012877
