@@ -16,25 +16,27 @@ from einops import rearrange, repeat
 from torch.utils import data
 from torch.utils.data import DataLoader	
 from info_nce import InfoNCE, info_nce
-import torch.distributed as dist
 
+import torch.distributed as dist
+from torch.nn.parallel import DistributedDataParallel as DDP
 
 from poi_utils import *
 from model_init import *
 
-def setup(rank, world_size):
-    os.environ['MASTER_ADDR'] = 'localhost'
+# def setup(rank, world_size):
+#     os.environ['MASTER_ADDR'] = 'localhost'
 
-    os.environ['MASTER_PORT'] = '12355'
+#     os.environ['MASTER_PORT'] = '12355'
 
-    dist.init_process_group("nccl", rank=rank, world_size=world_size)
+#     dist.init_process_group("nccl", rank=rank, world_size=world_size)
 
-    torch.cuda.set_device(rank)
+#     torch.cuda.set_device(rank)
 
 def get_loader(train_data_name, simple_dataset, BATCH_SIZE, device, rank, world_size):
-    train_sampler = DistributedSampler(train_set, num_replicas=world_size, rank=rank)
+    
     train_dataset = ContrastDataset('./ContrastDataset/' + train_data_name, device, simple=simple_dataset)
-    train_dataloader = DataLoader(train_dataset, batch_size = BATCH_SIZE, shuffle=True, sample = train_)
+    train_sampler = DistributedSampler(train_dataset)
+    train_dataloader = DataLoader(train_dataset, batch_size = BATCH_SIZE, shuffle=True, sample = train_sampler)
 
     return train_dataloader
 
@@ -90,6 +92,12 @@ def create_args():
         default='False'
     )
 
+    ########### DDP #####################
+    parser.add_argument(
+        "--local_rank",
+        default=-1
+    )
+
     args = parser.parse_args()
 
     return args
@@ -109,6 +117,19 @@ def main():
     SAVE_INTERVAL = args.save_interval
 
     cross_layer_num = args.cross_layer_num
+
+
+    ############# DDP ################
+    local_rank = args.local_rank
+    torch.cuda.set_device(local_rank)
+
+    dist.init_process_group(backend = 'nccl')
+
+    device = torch.device('cuda', local_rank)
+
+
+
+    #################################
 
 
     llm_embed_path = "./Embed/LLM_Embed/" + dataset +'/'
@@ -140,6 +161,14 @@ def main():
 
 
     Model = PoiEnhancer(path1, path2, path3, path4, cross_layer_num=cross_layer_num, dim=dim).cuda(device)
+
+    ############# DDP ################
+    Model = Model.to(device)
+    Model = DDP(Model, device_ids = [local_rank], output_device=local_rank)
+
+
+
+    #################################
     Model.train()
     optimizer = torch.optim.AdamW(Model.parameters(), lr=LR, weight_decay=1e-3)
 
