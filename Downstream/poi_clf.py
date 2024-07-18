@@ -32,7 +32,7 @@ def create_args():
     )
     
     parser.add_argument(
-        "--save_path"
+        "--save_path",
         type=str,
         default=None,
         help="Result save path",
@@ -119,8 +119,7 @@ if __name__ == '__main__':
     print('Acc %.6f, Pre %.6f, Recall %.6f, F1-micro %.6f, F1-macro %.6f' % (
         mean_acc, mean_pre, mean_recall, mean_f1_micro, mean_f1_macro))
 
-    if not args.save_path is None:
-        result = pd.DataFrame({
+    result = pd.DataFrame({
             'name': args.NAME,
             'accuracy': mean_acc,
             'precision': mean_pre,
@@ -128,6 +127,5 @@ if __name__ == '__main__':
             'f1-micro': mean_f1_macro,
             'f1-macro': mean_f1_macro,
         }, index=[1])
-        result.to_csv(args.save_path, index=False)
-
-    
+    save_path = './Result_Metric/' + dataset + '/' + name + '.clf'
+    result.to_csv(save_path, index=False)
