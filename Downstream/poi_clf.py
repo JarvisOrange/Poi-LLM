@@ -124,7 +124,7 @@ if __name__ == '__main__':
             'accuracy': mean_acc,
             'precision': mean_pre,
             'recall': mean_recall,
-            'f1-micro': mean_f1_macro,
+            'f1-micro': mean_f1_micro,
             'f1-macro': mean_f1_macro,
         }, index=[1])
     save_path = './Result_Metric/' + dataset + '/' + name + '.clf'
