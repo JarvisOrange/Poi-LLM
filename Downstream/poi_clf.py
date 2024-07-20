@@ -114,6 +114,8 @@ if __name__ == '__main__':
         acc, recall = metrics.accuracy_score(test_labels, pres), metrics.recall_score(test_labels, pres, average='macro', zero_division=0.0)
         f1_micro, f1_macro = metrics.f1_score(test_labels, pres, average='micro'), metrics.f1_score(test_labels, pres, average='macro')
         score_log.append([acc, pre, recall, f1_micro, f1_macro])
+        print('Acc %.6f, Pre %.6f, Recall %.6f, F1-micro %.6f, F1-macro %.6f' % (
+                    acc, pre, recall, f1_micro, f1_macro))
     
     mean_acc, mean_pre, mean_recall, mean_f1_micro, mean_f1_macro = np.mean(score_log, axis=0)
     print('Acc %.6f, Pre %.6f, Recall %.6f, F1-micro %.6f, F1-macro %.6f' % (

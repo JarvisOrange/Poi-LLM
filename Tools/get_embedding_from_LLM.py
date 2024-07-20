@@ -77,6 +77,7 @@ def main():
 
 
     prompt_df = pd.read_csv(prompt_data_path, header=0)
+    print(len(prompt_df))
     dataset_strings = list(prompt_df['prompt'])
 
     

@@ -111,7 +111,7 @@ class ContrastDataset(data.Dataset):
     def __init__(self,  path, device, simple=False):
         df = pd.read_csv(path,sep=',', header=0, dtype={'anchor':int,'positive':int, 'negative':str})
         if simple == 'True':
-            df= df.sample(frac=0.005)
+            df= df.sample(frac=0.000001)
         df['negative'] = df['negative'].apply(lambda x : eval(x))
         self.device = device
         self.data = df
@@ -168,7 +168,9 @@ def save_embed(Model, dataset, LLM, dim, poi_model, epoch, device, last=False):
 
     torch.save({'model': Model.state_dict()}, model_path + name_statedict)
 
-    poi_dataset = PoiDataset('./Dataset/Foursquare_NY/ny.geo', device)
+
+    path = './Dataset/Foursquare_' + dataset +'/'+ dataset.lower() + '.geo'
+    poi_dataset = PoiDataset(path, device)
     poi_dataloader = DataLoader(poi_dataset, batch_size = batch_size, shuffle = False)
 
     

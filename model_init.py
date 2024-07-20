@@ -293,7 +293,11 @@ class PoiEnhancer(nn.Module):
         self.llm_layer2 = EmbeddingBlock(embed_path = llm_e_path2)
         self.llm_layer3 = EmbeddingBlock(embed_path = llm_e_path3)
 
+     
+
         self.poi_layer = EmbeddingBlock(embed_path = poi_e_path, hidden_dim = dim, dim_reduct=False)
+
+       
 
         self.llm_e_dim = self.llm_layer1.get_shape()[1]
         self.poi_e_dim = self.poi_layer.get_shape()[1]

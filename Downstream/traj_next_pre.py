@@ -16,6 +16,9 @@ predict_len = 1
 test_ratio = 0.4
 
 import argparse
+import os
+os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
+
 
 def create_args():
     parser = argparse.ArgumentParser()
@@ -147,12 +150,14 @@ def one_step(pre_model, pre_len, embedding, num_loc, batch):
 if __name__ == '__main__':
 
     args = create_args()
-    device = torch.device("cuda:"+str(args.gpu) if torch.cuda.is_available() else "cpu")
+    # device = torch.device("cuda:"+str(args.gpu) if torch.cuda.is_available() else "cpu")
+    device = 'cpu'
     name = args.NAME
 
     dataset = args.dataset
 
     path1 = './Embed/Poi_Model_Embed/'+ args.POI_MODEL_NAME+'/poi_repr/'
+
     path2 = './Embed/Result_Embed/' + dataset + '/'
 
     
@@ -162,7 +167,10 @@ if __name__ == '__main__':
     train_set = torch.load(path1+'traj_train_set.pth')
     test_set = torch.load(path1+'traj_test_set.pth')
 
+
     poi_embedding = torch.load(path2 + name +'.pt').to(device)
+
+        
     
 
     #We have to remake the train set and test set
