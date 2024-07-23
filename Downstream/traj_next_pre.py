@@ -10,7 +10,7 @@ from tqdm import tqdm
 
 embed_size = 256 # The size of poi embeddings. 128 or 256 in our exp.
 task_epoch = 100
-downstream_batch_size = 16
+downstream_batch_size = 8
 pre_model_seq2seq = True
 predict_len = 1
 test_ratio = 0.4
@@ -150,8 +150,8 @@ def one_step(pre_model, pre_len, embedding, num_loc, batch):
 if __name__ == '__main__':
 
     args = create_args()
-    # device = torch.device("cuda:"+str(args.gpu) if torch.cuda.is_available() else "cpu")
-    device = 'cpu'
+    device = torch.device("cuda:"+str(args.gpu) if torch.cuda.is_available() else "cpu")
+    # device = 'cpu'
     name = args.NAME
 
     dataset = args.dataset

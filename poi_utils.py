@@ -163,7 +163,7 @@ def save_embed(Model, dataset, LLM, dim, poi_model, epoch, device, last=False):
     if not os.path.exists(model_path):
         os.makedirs(model_path)
 
-    batch_size = 256
+    batch_size = 128
 
 
     torch.save({'model': Model.state_dict()}, model_path + name_statedict)
@@ -176,7 +176,7 @@ def save_embed(Model, dataset, LLM, dim, poi_model, epoch, device, last=False):
     
 
     result_embed = torch.empty((len(poi_dataset), 256)).cpu()
-    torch.cuda.empty_cache()
+    # torch.cuda.empty_cache()
     index = 0
     with torch.no_grad():
         for step, batch in enumerate(poi_dataloader):

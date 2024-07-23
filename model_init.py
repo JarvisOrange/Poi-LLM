@@ -289,9 +289,9 @@ class PoiEnhancer(nn.Module):
         
         super().__init__()
         
-        self.llm_layer1 = EmbeddingBlock(embed_path = llm_e_path1)
-        self.llm_layer2 = EmbeddingBlock(embed_path = llm_e_path2)
-        self.llm_layer3 = EmbeddingBlock(embed_path = llm_e_path3)
+        self.llm_layer1 = EmbeddingBlock(embed_path = llm_e_path1, hidden_dim=dim)
+        self.llm_layer2 = EmbeddingBlock(embed_path = llm_e_path2, hidden_dim=dim)
+        self.llm_layer3 = EmbeddingBlock(embed_path = llm_e_path3, hidden_dim=dim)
 
      
 

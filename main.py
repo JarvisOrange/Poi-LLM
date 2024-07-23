@@ -51,7 +51,7 @@ def create_args():
         "--dim", type=int, default=256, help="model dimensions")
     
     parser.add_argument(
-        "--lr", type=float, default=1e-2)
+        "--lr", type=float, default=5e-3)
     
     parser.add_argument(
         "--epoch", type=int, default=100)
@@ -160,7 +160,7 @@ def main():
 
         Model = DDP(Model,  device_ids=[local_rank], output_device=local_rank)
 
-        optimizer = torch.optim.AdamW(Model.parameters(), lr=LR, weight_decay=1e-3)
+        optimizer = torch.optim.AdamW(Model.parameters(), lr=LR, weight_decay=1e-4)
 
         nceloss = InfoNCE(temperature=0.1,reduction='mean',negative_mode='paired').to(local_rank)
 
