@@ -12,6 +12,7 @@ Prompt/
 ContrastDataset/
 Model_cache/
 Model_state_dict_cache/
+Result_Metric/
 
 Scripts/train.sh
 Scripts/model_train.sh
