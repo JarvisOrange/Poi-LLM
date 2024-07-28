@@ -237,7 +237,7 @@ if __name__ == '__main__':
         'name': args.NAME,
         'accuracy1': best_acc1,
         'accuracy5': best_acc5,
-        'f1-micro': best_f1_macro,
+        'f1-micro': best_f1_micro,
         'f1-macro': best_f1_macro,
     }, index=[1])
     save_path = './Result_Metric/' + dataset + '/' + name + '.pre'

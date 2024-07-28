@@ -51,7 +51,7 @@ def create_args():
         "--dim", type=int, default=256, help="model dimensions")
     
     parser.add_argument(
-        "--lr", type=float, default=5e-3)
+        "--lr", type=float, default=1e-3)
     
     parser.add_argument(
         "--epoch", type=int, default=100)
@@ -117,9 +117,9 @@ def main():
 
     cross_layer_num = args.cross_layer_num
 
-    llm_embed_path = "./Embed/LLM_Embed/" + dataset 
+    llm_embed_path = "./Washed_Embed/LLM_Embed/" + dataset 
 
-    poi_embed_path = "./Embed/Poi_Model_Embed/"
+    poi_embed_path = "./Washed/"
 
     llm_name_list_address = [dataset, LLM, 'address','LAST']
     llm_name_list_cat_nearby = [dataset, LLM, 'cat_nearby','LAST']
@@ -128,12 +128,12 @@ def main():
     poi_name_list = [poi_model, str(dim), dataset.lower()]
     
 
-    path1 = llm_embed_path + '/' + '_'.join(llm_name_list_address) + '.pt'
-    path2 = llm_embed_path + '/' + '_'.join(llm_name_list_cat_nearby) + '.pt'
-    path3 = llm_embed_path + '/' + '_'.join(llm_name_list_time) + '.pt'
+    path_address = llm_embed_path + '/' + '_'.join(llm_name_list_address) + '.pt'
+    path_cat = llm_embed_path + '/' + '_'.join(llm_name_list_cat_nearby) + '.pt'
+    path_visit = llm_embed_path + '/' + '_'.join(llm_name_list_time) + '.pt'
 
 
-    path4 =  poi_embed_path +'/' + '_'.join(poi_name_list) + '/poi_repr/poi_repr.pth' 
+    path4 =  poi_embed_path +'/' + '_'.join(poi_name_list) + '/poi_repr.pth' 
 
 
     train_data_name = dataset+'_train.csv'
@@ -148,13 +148,13 @@ def main():
         dist.init_process_group(backend='nccl')
 
 
-        train_dataset = ContrastDataset('./ContrastDataset/' + train_data_name, device, simple=args.simple_dataset)
+        train_dataset = ContrastDataset('./Washed_ContrastDataset/' + train_data_name, device, simple=args.simple_dataset)
 
         train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
 
         train_dataloader = DataLoader(train_dataset, batch_size = BATCH_SIZE, num_workers = 2, shuffle=True, sampler = train_sampler)
 
-        Model = PoiEnhancer(path1, path2, path3, path4, cross_layer_num=cross_layer_num, dim=dim).cuda(device)
+        Model = PoiEnhancer(path_address, path_cat, path_visit, path4, cross_layer_num=cross_layer_num, dim=dim).cuda(device)
 
         Model = Model.to(local_rank)
 
@@ -214,11 +214,11 @@ def main():
 
     ########################
     else:
-        train_dataset = ContrastDataset('./ContrastDataset/' + train_data_name, device, simple=args.simple_dataset)
+        train_dataset = ContrastDataset('./Washed_ContrastDataset/' + train_data_name, device, simple=args.simple_dataset)
         train_dataloader = DataLoader(train_dataset, batch_size = BATCH_SIZE, shuffle=True)
 
 
-        Model = PoiEnhancer(path1, path2, path3, path4, cross_layer_num=cross_layer_num, dim=dim).to(device)
+        Model = PoiEnhancer(path_address, path_cat, path_visit, path4, cross_layer_num=cross_layer_num, dim=dim).to(device)
         Model.train()
         optimizer = torch.optim.AdamW(Model.parameters(), lr=LR, weight_decay=1e-3)
 
@@ -259,7 +259,7 @@ def main():
             print('epoch %d, loss： %.4f' % (epoch+1,sum(l)/ len(l)))
         
 
-            if (epoch+1) % SAVE_INTERVAL == 0:
+            if (epoch + 1) % SAVE_INTERVAL == 0:
                 Model.eval()
                 save_embed(Model, dataset, LLM, dim, poi_model, epoch+1, device)
                 Model.train()

@@ -17,9 +17,9 @@ import os
 
 
 dataset_path_dict = {
-    'NY':'./Dataset/Foursquare_NY/ny.geo',
-    'SG':'./Dataset/Foursquare_SG/sg.geo',
-    'TKY':'./Dataset/Foursquare_TKY/tky.geo',
+    'NY':'./Dataset/NY/ny_geo.csv',
+    'SG':'./Dataset/SG/sg_geo.csv',
+    'TKY':'./Dataset/TKY/tky_geo.csv',
 }
 
 def cal_degree(lon, lat, min_distance=0.5):
@@ -45,20 +45,22 @@ def get_geo_cat_neighbor(poi_list, poi_id, cat, minlon, maxlon, minlat, maxlat):
     return poi_geo_cat_neighbor
 
 
-def gen_poi_geoneighbor(dataset_name,  save_path="./ContrastDataset/"):
+def gen_poi_geoneighbor(dataset_name,  save_path="./Washed_ContrastDataset/"):
     data_path = dataset_path_dict[dataset_name]
 
     columns_standard = ["geo_id","coordinates","category"]
     if dataset_name == 'TKY':
-        columns_read = ['geo_id','coordinates','venue_category_name']
-        poi_df = pd.read_csv(data_path, sep=',', header=0, usecols=['geo_id','coordinates','venue_category_name'])
+        columns_read = ['geo_id_washed','coordinates','venue_category_name']
+        poi_df = pd.read_csv(data_path, sep=',', header=0, usecols=columns_read)
+        poi_df = poi_df.loc[:,['geo_id_washed','coordinates','venue_category_name']]
     else:
-        columns_read = ['geo_id','type','coordinates','poi_type']
+        columns_read = ['geo_id_washed','type','coordinates','poi_type']
         poi_df = pd.read_csv(data_path, sep=',', header=0, usecols=columns_read)
         poi_df = poi_df[poi_df['type']=='Point']
         poi_df = poi_df.drop(['type'], axis=1)
-        poi_df = poi_df.loc[:,['geo_id','coordinates','poi_type']]
+        poi_df = poi_df.loc[:,['geo_id_washed','coordinates','poi_type']]
     poi_df.columns = columns_standard 
+
     poi_df['lon'] = poi_df['coordinates'].apply(lambda x: eval(x)[0])
     poi_df['lat'] = poi_df['coordinates'].apply(lambda x: eval(x)[1])
 
@@ -69,6 +71,7 @@ def gen_poi_geoneighbor(dataset_name,  save_path="./ContrastDataset/"):
 
     geoneighbor_list = []
     # x = 0  #平均23.42181672045914
+    x = 0  #平均tky:5.605644948562385 sg:6.727299791604644 ny:8.09805954059209
     for _, row in tqdm(poi_df.iterrows(), total=poi_df.shape[0]):
         poi_id = row['geo_id']
         cat= row['category']
@@ -76,8 +79,9 @@ def gen_poi_geoneighbor(dataset_name,  save_path="./ContrastDataset/"):
         minlon, maxlon, minlat, maxlat = cal_degree(lon, lat)
         poi_geo_cat_neighbor = get_geo_cat_neighbor(poi_df, poi_id, cat, minlon, maxlon, minlat, maxlat)
         temp =  list(poi_geo_cat_neighbor['geo_id'])
+        x += len(temp)
         geoneighbor_list.append([poi_id, temp])
-        
+    print(x/len(poi_df))
     geoneighbor_df = pd.DataFrame(geoneighbor_list, columns=['geo_id','geo_positive'])
 
     save_path = save_path +'/'+ dataset_name +'/'
@@ -91,8 +95,8 @@ def gen_poi_geoneighbor(dataset_name,  save_path="./ContrastDataset/"):
         
       
         
-    
-gen_poi_geoneighbor('TKY')
+for dataset in ['TKY','NY','SG']:   
+    gen_poi_geoneighbor(dataset)  
 
     
         

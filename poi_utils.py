@@ -88,11 +88,11 @@ def weight_init(m):
 
 class PoiDataset(data.Dataset):
     def __init__(self,  path, device):
-        df = pd.read_csv(path,sep=',', header=0, usecols=['geo_id','type'])
+        df = pd.read_csv(path,sep=',', header=0, usecols=['geo_id_washed','type'])
         df = df[df['type']=='Point']
         df = df.drop(['type'], axis=1)
         first = df.iloc[0,0]
-        df['geo_id'] = df['geo_id'].apply(lambda x: x - first)
+        df['geo_id_washed'] = df['geo_id_washed'].apply(lambda x: x - first)
 
         self.device = device
         self.data = df
@@ -111,7 +111,7 @@ class ContrastDataset(data.Dataset):
     def __init__(self,  path, device, simple=False):
         df = pd.read_csv(path,sep=',', header=0, dtype={'anchor':int,'positive':int, 'negative':str})
         if simple == 'True':
-            df= df.sample(frac=0.000001)
+            df= df.sample(frac=0.0001)
         df['negative'] = df['negative'].apply(lambda x : eval(x))
         self.device = device
         self.data = df
@@ -153,9 +153,9 @@ def save_embed(Model, dataset, LLM, dim, poi_model, epoch, device, last=False):
         
         name_statedict = dataset + '_' + LLM + '_' + poi_model + '_'+ str(dim) +  '_Epoch_' +str(epoch) +'_statedict.pt'
     
-    embed_path = './Embed/Result_Embed/'+ dataset +'/' 
+    embed_path = './Washed_Embed/Result_Embed/'+ dataset +'/' 
 
-    model_path =  "./Model_state_dict_cache/" + dataset +'/'
+    model_path =  "./Washed_Model_state_dict_cache/" + dataset +'/'
 
     if not os.path.exists(embed_path):
         os.makedirs(embed_path)
@@ -169,21 +169,22 @@ def save_embed(Model, dataset, LLM, dim, poi_model, epoch, device, last=False):
     torch.save({'model': Model.state_dict()}, model_path + name_statedict)
 
 
-    path = './Dataset/Foursquare_' + dataset +'/'+ dataset.lower() + '.geo'
+    path = './Dataset/' + dataset +'/'+ dataset.lower() + '_geo.csv'
     poi_dataset = PoiDataset(path, device)
     poi_dataloader = DataLoader(poi_dataset, batch_size = batch_size, shuffle = False)
 
     
 
-    result_embed = torch.empty((len(poi_dataset), 256)).cpu()
+    result_embed = torch.empty((len(poi_dataset), dim)).cpu()
+
     # torch.cuda.empty_cache()
     index = 0
     with torch.no_grad():
         for step, batch in enumerate(poi_dataloader):
-
-       
-            out = Model(batch)
-            
+            try:
+                out = Model(batch)
+            except:
+                print(batch)
             out = out[0].squeeze(1)
 
 

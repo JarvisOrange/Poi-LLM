@@ -13,6 +13,12 @@ ContrastDataset/
 Model_cache/
 Model_state_dict_cache/
 Result_Metric/
+Washed_ContrastDataset/
+Washed_Embed/
+Washed_Feature/
+Washed_Model_state_dict_cache/
+Washed/
+Washed_Prompt/
 
 Scripts/train.sh
 Scripts/model_train.sh

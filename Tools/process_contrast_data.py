@@ -10,9 +10,9 @@ import os
 
 
 dataset_path_dict = {
-    'NY':'./ContrastDataset/NY/',
-    'SG':'./ContrastDataset/SG/',
-    'TKY':'./ContrastDataset/TKY/',
+    'NY':'./Washed_ContrastDataset/NY/',
+    'SG':'./Washed_ContrastDataset/SG/',
+    'TKY':'./Washed_ContrastDataset/TKY/',
 }
 
 
@@ -64,4 +64,4 @@ def process_contrast_data(dataset_name='NY'):
     train_data_df.to_csv(train_data_name, index=False, header=True, sep=',')
     
 
-process_contrast_data('SG')
+process_contrast_data('NY')

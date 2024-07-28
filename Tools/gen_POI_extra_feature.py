@@ -17,16 +17,16 @@ import os
 
 
 dataset_traj_path_dict = {
-    'NY':'./Dataset/Foursquare_NY/ny.poitraj',
-    'SG':'./Dataset/Foursquare_SG/sg.poitraj',
-    'TKY':'./Dataset/Foursquare_TKY/tky.poitraj',
+    'NY':'./Dataset/NY/ny_traj.csv',
+    'SG':'./Dataset/SG/sg_traj.csv',
+    'TKY':'./Dataset/TKY/tky_traj.csv',
 }
 
 
 dataset_geo_path_dict = {
-    'NY':'./Dataset/Foursquare_NY/ny.geo',
-    'SG':'./Dataset/Foursquare_SG/sg.geo',
-    'TKY':'./Dataset/Foursquare_TKY/tky.geo',
+    'NY':'./Dataset/NY/ny_geo.csv',
+    'SG':'./Dataset/SG/sg_geo.csv',
+    'TKY':'./Dataset/TKY/tky_geo.csv',
 }
 
 ### gen poi visit-time feature
@@ -72,16 +72,16 @@ def get_daytime(time):
     else:
         return 6
 
-def gen_poi_time_feature(dataset_name,  save_path=None):
+def gen_poi_visit_time_feature(dataset_name,  save_path=None):
         
     data_path = dataset_traj_path_dict[dataset_name]
     poi_df = pd.read_csv(data_path, sep=',', header=0)
 
-    columns_standard = ["entity_id","location","time","type","dyna_id"]
+    columns_standard = ["index","entity_id","location","time","type","dyna_id"]
     if dataset_name != 'TKY':
         poi_df.columns = columns_standard
     else:
-        poi_df.columns = ["dyna_id","type","time","entity_id","location"]
+        poi_df.columns = ["index","dyna_id","type","time","entity_id","location"]
         poi_df = poi_df.loc[:, columns_standard]
 
 
@@ -103,7 +103,7 @@ def gen_poi_time_feature(dataset_name,  save_path=None):
         locations['date'] = locations['date'].apply(get_weekday_weekend)
         locations['daytime'] = locations['daytime'].apply(get_daytime)
 
-        poi_id = locations.iloc[0, 1] # second column is 'location'
+        poi_id = locations.iloc[0, 2] # third column is 'location'
        
         total = len(l_g[1])
 
@@ -125,7 +125,7 @@ def gen_poi_time_feature(dataset_name,  save_path=None):
         poi_time_feature_result.append([poi_id, total, day_feature, hour_feature])
 
     poi_time_feature_df = pd.DataFrame(poi_time_feature_result, columns=['geo_id','total_visit_time','day_feature','hour_feature'])
-
+    poi_time_feature_df.sort_values(by='geo_id', inplace=True, ascending=True)
     if not os.path.exists(save_path):
             os.makedirs(save_path)
     name = 'poi' + "_" + dataset_name + "_time.csv"
@@ -137,7 +137,7 @@ def gen_poi_time_feature(dataset_name,  save_path=None):
 
         
 ### gen poi poi-nearby feature
-def cal_degree(lon, lat, min_distance=0.05):
+def cal_degree(lon, lat, min_distance=0.5):
         r = 6371
         dlon =  2 * math.asin(math.sin(min_distance/(2*r))/math.cos(lat * math.pi/180))
         dlon = dlon * 180 / math.pi
@@ -174,15 +174,17 @@ def gen_poi_category_feature(dataset_name,  save_path=None):
 
     columns_standard = ["geo_id","coordinates","category"]
     if dataset_name == 'TKY':
-        columns_read = ['geo_id','coordinates','venue_category_name']
-        poi_df = pd.read_csv(data_path, sep=',', header=0, usecols=['geo_id','coordinates','venue_category_name'])
+        columns_read = ['geo_id_washed','coordinates','venue_category_name']
+        poi_df = pd.read_csv(data_path, sep=',', header=0, usecols=columns_read)
+        poi_df = poi_df.loc[:,['geo_id_washed','coordinates','venue_category_name']]
     else:
-        columns_read = ['geo_id','type','coordinates','poi_type']
+        columns_read = ['geo_id_washed','type','coordinates','poi_type']
         poi_df = pd.read_csv(data_path, sep=',', header=0, usecols=columns_read)
         poi_df = poi_df[poi_df['type']=='Point']
         poi_df = poi_df.drop(['type'], axis=1)
-        poi_df = poi_df.loc[:,['geo_id','coordinates','poi_type']]
+        poi_df = poi_df.loc[:,['geo_id_washed','coordinates','poi_type']]
     poi_df.columns = columns_standard 
+    
     poi_df['lon'] = poi_df['coordinates'].apply(lambda x: eval(x)[0])
     poi_df['lat'] = poi_df['coordinates'].apply(lambda x: eval(x)[1])
 
@@ -192,6 +194,8 @@ def gen_poi_category_feature(dataset_name,  save_path=None):
     
     geoneighbor_dict = {}
     poi_category_feature_result = []
+
+
     for _, row in tqdm(poi_df.iterrows(), total=poi_df.shape[0]):
         geo_id = row['geo_id']
         cat = row['category']
@@ -202,10 +206,10 @@ def gen_poi_category_feature(dataset_name,  save_path=None):
         temp = cal_poi_category(poi_geoneighbor['category'])
 
         poi_category_feature_result.append([geo_id, cat, temp])
-
+    
 
     poi_category_feature_df = pd.DataFrame(poi_category_feature_result, columns=['geo_id','category','category_nearby'])
-
+    
     if not os.path.exists(save_path):
             os.makedirs(save_path)
     name = 'poi' + "_" + dataset_name + "_cat_nearby.csv"
@@ -219,8 +223,16 @@ def gen_poi_category_feature(dataset_name,  save_path=None):
 
 # gen_poi_category_feature(dataset, save_path= save_path)
 
-for dataset in ['NY','SG','TKY']:
-    save_path = "./Feature/" + dataset + "/"
+# for dataset in ['NY','SG','TKY']:
+#     save_path = "./Feature_washed/" + dataset + "/"
+#     if not os.path.exists(save_path):
+#             os.makedirs(save_path)
+#     gen_poi_visit_time_feature(dataset, save_path = save_path)
+
+for dataset in ['TKY','NY','SG']:
+    save_path = "./Feature_washed/" + dataset + "/"
+    if not os.path.exists(save_path):
+            os.makedirs(save_path)
     gen_poi_category_feature(dataset, save_path = save_path)
 
 

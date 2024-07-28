@@ -16,9 +16,9 @@ from random import choice
 import os
 
 dataset_path_dict = {
-    'NY':'./Dataset/Foursquare_NY/ny.poitraj',
-    'SG':'./Dataset/Foursquare_SG/sg.poitraj',
-    'TKY':'./Dataset/Foursquare_TKY/tky.poitraj',
+    'NY':'./Dataset/NY/ny_traj.csv',
+    'SG':'./Dataset/SG/sg_traj.csv',
+    'TKY':'./Dataset/TKY/tky_traj.csv',
 }
 
 monthdict={
@@ -50,16 +50,16 @@ def get_day(time):
         return (year, month, day)
         
 
-def gen_seq_neighbor(dataset_name, window=2,   save_path="./ContrastDataset/"):
+def gen_seq_neighbor(dataset_name, window=2,   save_path="./Washed_ContrastDataset/"):
     data_path = dataset_path_dict[dataset_name]
 
     poi_df = pd.read_csv(data_path, sep=',', header=0)
 
-    columns_standard = ["entity_id","location","time","type","dyna_id"]
+    columns_standard = ["index","entity_id","location","time","type","dyna_id"]
     if dataset_name != 'TKY':
         poi_df.columns = columns_standard
     else:
-        poi_df.columns = ["dyna_id","type","time","entity_id","location"]
+        poi_df.columns = ["index","dyna_id","type","time","entity_id","location"]
         poi_df = poi_df.loc[:, columns_standard]
 
     
@@ -73,10 +73,12 @@ def gen_seq_neighbor(dataset_name, window=2,   save_path="./ContrastDataset/"):
         length = len(traj)
         
         traj['day'] = traj['time'].apply(get_day)
+
+        
         
         for i in range(length):
-            poi_id = traj.iloc[i, 1] #location id
-            poi_day = traj.iloc[i,5] #day time
+            poi_id = traj.iloc[i, 2] #location id
+            poi_day = traj.iloc[i, 6] #day time
             temp= traj.iloc[max(0,i - window): min(length,i + window + 1), :]
             temp = temp[(temp['day'] == poi_day) & (temp['location'] != poi_id)]
             if len(temp) != 0:
@@ -102,4 +104,5 @@ def gen_seq_neighbor(dataset_name, window=2,   save_path="./ContrastDataset/"):
 
 
     
-gen_seq_neighbor('TKY')
+for dataset in ['TKY','NY','SG']:   
+    gen_seq_neighbor(dataset)  

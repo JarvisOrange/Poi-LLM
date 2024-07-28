@@ -142,7 +142,7 @@ class CrossAttentionBlock(nn.Module):
 
         out = self.to_out(out)
 
-        out = out + self.feedforward(x)
+        out = out + self.feedforward(y)
         
 
         return out
@@ -224,11 +224,10 @@ class SelfAttentionBlock(nn.Module):
 class FuseAttentionBlock(nn.Module):
     def __init__(self, dim, dim_fused):
         super().__init__()
-        self.W = nn.Linear(dim, dim_fused, bias=False)
-        self.f = nn.Linear(dim_fused * 2, 1)
+        self.W1 = nn.Linear(dim, dim_fused, bias=False)
         
-        # self.f1 = nn.Conv1d(dim_fused, 1, kernel_size=1)
-        # self.f2 = nn.Conv1d(dim_fused, 1, kernel_size=1)
+        self.W2 = nn.Linear(dim_fused * 2, 1)
+        
         self.act = nn.LeakyReLU(negative_slope=0.3, inplace=True)
                   
                  
@@ -237,47 +236,20 @@ class FuseAttentionBlock(nn.Module):
         '''
         x: b n d
         '''
-        # seq_fts = self.W(src)
-        # print(seq_fts.shape) #1536 1 8
-        # f_1 = self.f1(seq_fts)
-        # f_2 = self.f2(seq_fts)
-        # print(f_1.shape) #1536 1 8
-        # print(f_2.transpose(1, 2).shape) #1536 8 1
-        # logits = f_1 + f_2.transpose(1, 2)
-        # print(logits.shape) #1536 8 8
-        # coefs = torch.mean(self.act(logits), dim=-1)
-        # print(coefs.shape) #1536  8
-        # coefs = torch.mean(coefs, dim=0)
-        # print(coefs.shape) #1536  8
-        # coefs = F.softmax(coefs, dim=-1)
- 
-        # exit()
 
-        f = self.W(x) # b n dim_fused
+        f = self.W1(x) # b n dim_fused
 
 
-        f1, f2, f3 = f[0], f[1], f[2]
+        f1, f2 = f[0], f[1]
 
 
-        a12 = self.act(self.f(torch.cat([f1, f2], dim=-1)))
-        a13 = self.act(self.f(torch.cat([f1, f3], dim=-1)))
-
-
+        a12 = self.W2(self.act(torch.cat([f1, f2], dim=-1)))
         
-        a21 = self.act(self.f(torch.cat([f2, f1], dim=-1)))
-        a23 = self.act(self.f(torch.cat([f2, f3], dim=-1)))
-
-        a31 = self.act(self.f(torch.cat([f3, f1], dim=-1)))
-        a32 = self.act(self.f(torch.cat([f3, f2], dim=-1)))
-
-        a1 = torch.mean(a12 + a13, dim=0)
-
-
-        a2 = torch.mean(a21 + a23, dim=0)
-
-        a3 = torch.mean(a31 + a32, dim=0)
         
-        coef = torch.cat([a1,a2,a3])
+        a21 = self.W2(self.act(torch.cat([f2, f1], dim=-1)))
+    
+        
+        coef = torch.cat([a12, a21])
 
         coef = F.softmax(coef, dim=-1)
 
@@ -285,13 +257,13 @@ class FuseAttentionBlock(nn.Module):
  
 
 class PoiEnhancer(nn.Module):
-    def __init__(self,  llm_e_path1, llm_e_path2, llm_e_path3, poi_e_path, cross_layer_num=1, dim=256):
+    def __init__(self,  llm_e_path_a, llm_e_path_c, llm_e_path_t, poi_e_path, cross_layer_num=1, dim=256):
         
         super().__init__()
         
-        self.llm_layer1 = EmbeddingBlock(embed_path = llm_e_path1, hidden_dim=dim)
-        self.llm_layer2 = EmbeddingBlock(embed_path = llm_e_path2, hidden_dim=dim)
-        self.llm_layer3 = EmbeddingBlock(embed_path = llm_e_path3, hidden_dim=dim)
+        self.llm_layer_a = EmbeddingBlock(embed_path = llm_e_path_a, hidden_dim=dim)
+        self.llm_layer_c = EmbeddingBlock(embed_path = llm_e_path_c, hidden_dim=dim)
+        self.llm_layer_t = EmbeddingBlock(embed_path = llm_e_path_t, hidden_dim=dim)
 
      
 
@@ -299,18 +271,28 @@ class PoiEnhancer(nn.Module):
 
        
 
-        self.llm_e_dim = self.llm_layer1.get_shape()[1]
+        self.llm_e_dim = self.llm_layer_a.get_shape()[1]
         self.poi_e_dim = self.poi_layer.get_shape()[1]
 
 
-
-        self.attention_block1 = SelfAttentionBlock(dim=self.poi_e_dim)
-        self.attention_block2 = SelfAttentionBlock(dim=self.poi_e_dim)
-        self.attention_block3 = SelfAttentionBlock(dim=self.poi_e_dim)
-
-        self.fuse_attention =  FuseAttentionBlock(dim=self.poi_e_dim, dim_fused= 2 * self.poi_e_dim)
-
         self.cross_layer_num = cross_layer_num
+        
+        self.cat_attention_fusion = nn.ModuleList([])
+        for ind in range(cross_layer_num):
+            self.cat_attention_fusion.append(
+                CrossAttentionBlock(dim=self.poi_e_dim, dim_fused=self.poi_e_dim)
+            )
+
+        self.time_attention_fusion = nn.ModuleList([])
+        for ind in range(cross_layer_num):
+            self.time_attention_fusion.append(
+                CrossAttentionBlock(dim=self.poi_e_dim, dim_fused=self.poi_e_dim)
+            )
+
+
+        self.nonlinear_attention_fusion =  FuseAttentionBlock(dim=self.poi_e_dim, dim_fused= 2 * self.poi_e_dim)
+
+        
 
         self.cross_attention_fusion = nn.ModuleList([])
         for ind in range(cross_layer_num):
@@ -326,34 +308,40 @@ class PoiEnhancer(nn.Module):
 
     def forward(self, batch):
     
-        llm_e1 = self.llm_layer1(batch)
+        llm_e_a_1 = self.llm_layer_a(batch)
+        llm_e_a_2 = llm_e_a_1
         
-        llm_e2 = self.llm_layer2(batch)
-        llm_e3 = self.llm_layer3(batch)
+        llm_e_c = self.llm_layer_c(batch)
+        llm_e_t = self.llm_layer_t(batch)
 
-        y = self.poi_layer(batch)
+        
+        
 
-        x1 = self.attention_block1(llm_e1)
-        x2 = self.attention_block2(llm_e2)
-        x3 = self.attention_block3(llm_e3)
+        for cat_attention_fusion in self.cat_attention_fusion:
+            llm_e_a_1 = cat_attention_fusion(llm_e_c, llm_e_a_1)
+        
+        for time_attention_fusion in self.time_attention_fusion:
+            llm_e_a_2 = time_attention_fusion(llm_e_t, llm_e_a_2)
 
-        out = torch.stack([x1, x2, x3])
+        out = torch.stack([llm_e_a_1, llm_e_a_2])
 
         out1 = rearrange(out, 'fn b n d -> fn (b n) d')
         
-        coef = self.fuse_attention(out1)
+        coef = self.nonlinear_attention_fusion(out1)
 
+        temp_out = coef[0] * out[0] + coef[1] * out[1] 
 
-        temp_out = coef[0] * out[0] + coef[1] * out[1] + coef[2] * out[2]
+        y = self.poi_layer(batch)
+        y_ = y
 
         for cross_attention_fusion in self.cross_attention_fusion:
-            temp_out = cross_attention_fusion(temp_out, y)
+            y = cross_attention_fusion(temp_out, y)
 
 
-        z = temp_out
+        z = y
 
         
-        return z, y
+        return z, y_
 
 
 
