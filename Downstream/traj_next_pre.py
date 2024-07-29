@@ -156,9 +156,9 @@ if __name__ == '__main__':
 
     dataset = args.dataset
 
-    path1 = './Embed/Poi_Model_Embed/'+ args.POI_MODEL_NAME+'/poi_repr/'
+    path1 = './Washed/'+ args.POI_MODEL_NAME+'/'
 
-    path2 = './Embed/Result_Embed/' + dataset + '/'
+    path2 = './Washed_Embed/Result_Embed/' + dataset + '/'
 
     
     #FIXME
@@ -184,7 +184,7 @@ if __name__ == '__main__':
     num_loc = len(category)
     pre_model = TrajectoryPredictor(num_slots=10, aux_embed_size=16,
                                     time_thres=10800, dist_thres=0.1,
-                                    input_size=embed_size, lstm_hidden_size=embed_size * 4,
+                                    input_size=embed_size, lstm_hidden_size=512,
                                     fc_hidden_size=embed_size * 4, output_size=num_loc, num_layers=2,
                                     seq2seq=pre_model_seq2seq)
 
@@ -236,8 +236,14 @@ if __name__ == '__main__':
         'name': args.NAME,
         'accuracy1': best_acc1,
         'accuracy5': best_acc5,
-        'f1-micro': best_f1_micro,
+        'f1-micro': best_f1_macro,
         'f1-macro': best_f1_macro,
     }, index=[1])
-    save_path = './Washed_Result_Metric/' + dataset + '/' + name + '.pre'
-    result.to_csv(save_path, index=False)
+
+    import os
+    save_path = './Washed_Result_Metric/' + dataset + '/' + name +'/'
+    if not os.path.exists(save_path):
+            os.makedirs(save_path)
+
+    save_path = './Result_Metric/' + dataset + '/' + name + '.traj'
+    result.to_csv(save_path + + name + '.pre', index=False)

@@ -153,9 +153,9 @@ def save_embed(Model, dataset, LLM, dim, poi_model, epoch, device, last=False):
         
         name_statedict = dataset + '_' + LLM + '_' + poi_model + '_'+ str(dim) +  '_Epoch_' +str(epoch) +'_statedict.pt'
     
-    embed_path = './Washed_Embed/Result_Embed/'+ dataset +'/' 
+    embed_path = './Washed_Embed/Result_Embed/'+ dataset +'/' + dataset + '_' + LLM + '_' + poi_model + '_'+ str(dim) + '/'
 
-    model_path =  "./Washed_Model_state_dict_cache/" + dataset +'/'
+    model_path =  "./Washed_Model_state_dict_cache/" + dataset  +'/'+ dataset + '_' + LLM + '_' + poi_model + '_'+ str(dim) + '/'
 
     if not os.path.exists(embed_path):
         os.makedirs(embed_path)

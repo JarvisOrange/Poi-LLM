@@ -227,6 +227,7 @@ def main():
             
             
     elif prompt_type == 'cat_nearby':
+        x = 0
         for _, row in tqdm(poi_df.iterrows(), total=poi_df.shape[0]):
             prompt = ''
             prompt += prompt_base 
@@ -254,23 +255,27 @@ def main():
             prompt +=  "The latitude and longitude of the POI are "+ lat +" and " + lon + '.'
 
 
-            category = row['category']
+            # category = row['category']
             category_nearby = row['category_nearby']
 
-            prompt += "\n"+"Category Information: The POI is a " + category + "."
+            prompt += "\n"+"Surrounding Information:" 
 
             if category_nearby != " ":   
+                x += 1
                 temp = category_nearby.split(',')
                 if len(temp) == 1:
-                    prompt += " And there are " + temp[0] + " near the POI."
+                    prompt += " There are " + temp[0] + " near the POI."
                 elif len(temp) == 2:
-                    prompt += " And there are " + temp[0] + ' and ' + temp[1] + " near the POI."
+                    prompt += " There are " + temp[0] + ' and ' + temp[1] + " near the POI."
                 elif len(temp) == 3:
-                    prompt += " And there are " + temp[0] + ', ' + temp[1] + ' and ' + temp[2] + " near the POI."
+                    prompt += " There are " + temp[0] + ', ' + temp[1] + ' and ' + temp[2] + " near the POI."
+            else:
+                prompt += " There are no other POIs near this POI."
                 
-
+        
             prompt += "\n"+"Question: What type of POI is the POI in " + dataset_city_dict[dataset_name] +"?"
             prompt_result.append(prompt)
+        print(x)
 
         
     

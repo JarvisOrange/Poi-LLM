@@ -107,4 +107,3 @@ def accuracy(output, target, topk=(1,)):
             correct_k = correct[:k].float().sum()
             res.append(correct_k.mul_(100.0 / batch_size))
         return res[0],res[-1]
-    

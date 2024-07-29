@@ -11,7 +11,6 @@ python main.py \
     --epoch_num 50 \
     --dim 256 \
     --save_interval 1 \
-    --cpu 1
     
     
 # CUDA_VISIBLE_DEVICES="0, 1, 2, 3" \

@@ -21,4 +21,4 @@ Washed/
 Washed_Prompt/
 
 Scripts/train.sh
-Scripts/model_train.sh
+Scripts/simple_model_train.sh

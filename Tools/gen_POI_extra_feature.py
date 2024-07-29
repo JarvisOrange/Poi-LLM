@@ -195,7 +195,7 @@ def gen_poi_category_feature(dataset_name,  save_path=None):
     geoneighbor_dict = {}
     poi_category_feature_result = []
 
-
+    x = 0
     for _, row in tqdm(poi_df.iterrows(), total=poi_df.shape[0]):
         geo_id = row['geo_id']
         cat = row['category']
@@ -204,9 +204,12 @@ def gen_poi_category_feature(dataset_name,  save_path=None):
         poi_geoneighbor = get_geoneighbor(poi_df, geo_id, minlon, maxlon, minlat, maxlat)
         geoneighbor_dict['geo_id'] =  poi_geoneighbor['geo_id']
         temp = cal_poi_category(poi_geoneighbor['category'])
+        if temp == ' ':
+             x+=1
+             
 
         poi_category_feature_result.append([geo_id, cat, temp])
-    
+    print(x)
 
     poi_category_feature_df = pd.DataFrame(poi_category_feature_result, columns=['geo_id','category','category_nearby'])
     
@@ -230,7 +233,7 @@ def gen_poi_category_feature(dataset_name,  save_path=None):
 #     gen_poi_visit_time_feature(dataset, save_path = save_path)
 
 for dataset in ['TKY','NY','SG']:
-    save_path = "./Feature_washed/" + dataset + "/"
+    save_path = "./Washed_Feature/" + dataset + "/"
     if not os.path.exists(save_path):
             os.makedirs(save_path)
     gen_poi_category_feature(dataset, save_path = save_path)
