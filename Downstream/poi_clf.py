@@ -85,7 +85,10 @@ if __name__ == '__main__':
     score_log = []
 
     for i,(train_ind,valid_ind) in enumerate(skf.split(inputs,labels)):
-        for epoch in tqdm(range(task_epoch), desc=f'Fold {i + 1}/5', total=task_epoch):
+        for submodule in clf_model.children():
+            if type(submodule) is nn.Linear:
+                submodule.reset_parameters()
+        for epoch in range(task_epoch):
             for _, batch in enumerate(next_batch(train_ind, downstream_batch_size)):
                 batch_input = inputs[batch].clone()
                 batch_label = torch.tensor(labels[batch],dtype=torch.long,device=device)
@@ -99,16 +102,17 @@ if __name__ == '__main__':
             
         pres_raw=[]
         test_labels=[]
-        for _, batch in enumerate(next_batch(valid_ind, downstream_batch_size)):
-            batch_input = inputs[batch].clone()
-            batch_label = torch.tensor(labels[batch],dtype=torch.long,device=device)
-            out=clf_model(batch_input)
+        with torch.no_grad():
+            for _, batch in enumerate(next_batch(valid_ind, downstream_batch_size)):
+                batch_input = inputs[batch].clone()
+                batch_label = torch.tensor(labels[batch],dtype=torch.long,device=device)
+                out=clf_model(batch_input)
 
             pres_raw.append(out.detach().cpu().numpy())
             test_labels.append(batch_label.detach().cpu().numpy())
 
-        pres_raw, test_labels = np.concatenate(pres_raw), np.concatenate(test_labels)
-        pres = pres_raw.argmax(-1)
+            pres_raw, test_labels = np.concatenate(pres_raw), np.concatenate(test_labels)
+            pres = pres_raw.argmax(-1)
 
         pre = metrics.precision_score(test_labels, pres, average='macro', zero_division=0.0)
         acc, recall = metrics.accuracy_score(test_labels, pres), metrics.recall_score(test_labels, pres, average='macro', zero_division=0.0)

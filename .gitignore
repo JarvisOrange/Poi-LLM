@@ -14,5 +14,15 @@ Model_cache/
 Model_state_dict_cache/
 Result_Metric/
 
-Scripts/train.sh
-Scripts/model_train.sh
+
+
+Scripts/simple_model_train.sh
+
+
+Washed/
+Washed_Embed/
+Washed_Feature/
+Washed_ContrastDataset/
+Washed_Model_state_dict_cache/
+Washed_Prompt/
+Washed_Result_Metric
