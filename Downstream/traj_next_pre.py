@@ -160,21 +160,14 @@ if __name__ == '__main__':
 
     path2 = './Embed/Result_Embed/' + dataset + '/'
 
-    
-    #FIXME
     category = pd.read_csv(path1+'category.csv', usecols=['geo_id'])
     
-    train_set = torch.load(path1+'traj_train_set.pth')
-    test_set = torch.load(path1+'traj_test_set.pth')
-
+    traj_set = torch.load(path1+'traj_set.pth')
 
     poi_embedding = torch.load(path2 + name +'.pt').to(device)
 
-        
-    
-
     #We have to remake the train set and test set
-    whole_set = list(filter(lambda data: len(data[1]) > predict_len, train_set + test_set))
+    whole_set = list(filter(lambda data: len(data[1]) > predict_len, traj_set))
     np.random.seed(42)
     shuffle(whole_set)
     train_set = whole_set[int(len(whole_set) * test_ratio):]
