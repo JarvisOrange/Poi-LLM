@@ -86,6 +86,9 @@ if __name__ == '__main__':
 
     for i,(train_ind,valid_ind) in enumerate(skf.split(inputs,labels)):
         for epoch in tqdm(range(task_epoch), desc=f'Fold {i + 1}/5', total=task_epoch):
+            for submodule in clf_model.children():
+                if type(submodule) is nn.Linear:
+                    submodule.reset_parameters()
             for _, batch in enumerate(next_batch(train_ind, downstream_batch_size)):
                 batch_input = inputs[batch].clone()
                 batch_label = torch.tensor(labels[batch],dtype=torch.long,device=device)
@@ -129,5 +132,5 @@ if __name__ == '__main__':
             'f1-micro': mean_f1_micro,
             'f1-macro': mean_f1_macro,
         }, index=[1])
-    save_path = './Result_Metric/' + dataset + '/' + name + '.clf'
+    save_path = './Washed_Result_Metric/' + dataset + '/' + name + '.clf'
     result.to_csv(save_path, index=False)

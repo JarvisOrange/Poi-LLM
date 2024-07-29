@@ -164,8 +164,7 @@ if __name__ == '__main__':
     #FIXME
     category = pd.read_csv(path1+'category.csv', usecols=['geo_id'])
     
-    train_set = torch.load(path1+'traj_train_set.pth')
-    test_set = torch.load(path1+'traj_test_set.pth')
+    traj_set = torch.load(path1+'traj_set.pth')
 
 
     poi_embedding = torch.load(path2 + name +'.pt').to(device)
@@ -174,7 +173,7 @@ if __name__ == '__main__':
     
 
     #We have to remake the train set and test set
-    whole_set = list(filter(lambda data: len(data[1]) > predict_len, train_set + test_set))
+    whole_set = list(filter(lambda data: len(data[1]) > predict_len, traj_set))
     np.random.seed(42)
     shuffle(whole_set)
     train_set = whole_set[int(len(whole_set) * test_ratio):]
@@ -240,5 +239,5 @@ if __name__ == '__main__':
         'f1-micro': best_f1_micro,
         'f1-macro': best_f1_macro,
     }, index=[1])
-    save_path = './Result_Metric/' + dataset + '/' + name + '.pre'
+    save_path = './Washed_Result_Metric/' + dataset + '/' + name + '.pre'
     result.to_csv(save_path, index=False)
