@@ -4,8 +4,6 @@ import numpy as np
 from itertools import zip_longest
 import torch
 
-'''Most codes from project TALE https://github.com/Logan-Lin/TALE.'''
-
 def weight_init(m):
     """
     Usage:
