@@ -46,7 +46,9 @@ if __name__ == '__main__':
     dataset = args.dataset
     poi_model_name = args.POI_MODEL_NAME
 
-    embedding = torch.load('Washed_Embed/Result_Embed/{}/{}.pt'.format(dataset, name)).to(device)
+    temp = name.split('_')
+    name_without_epoch = '_'.join(temp[:-2])
+    embedding = torch.load('Washed_Embed/Result_Embed/{}/{}/{}.pt'.format(dataset,name_without_epoch, name)).to(device)
     category = pd.read_csv('Washed/{}/category.csv'.format(poi_model_name), usecols=['geo_id', 'category'])
 
     inputs=category.geo_id.to_numpy()
@@ -79,7 +81,7 @@ if __name__ == '__main__':
     }, index=[1])
 
     import os
-    save_path = './Washed_Result_Metric/' + dataset + '/' + name +'/'
+    save_path = './Washed_Result_Metric/' + args.dataset + '/' + name +'/'
     if not os.path.exists(save_path):
             os.makedirs(save_path)
-    result.to_csv(save_path + + name + '.cluster', index=False)
+    result.to_csv(save_path + name + '.cluster', index=False)

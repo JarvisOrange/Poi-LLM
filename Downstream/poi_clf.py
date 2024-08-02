@@ -56,10 +56,14 @@ if __name__ == '__main__':
     dataset = args.dataset
 
     path1 = './Washed/'+ args.POI_MODEL_NAME+'/'
-    path2 = './Washed_Embed/Result_Embed/' + dataset + '/'
+
+    temp = name.split('_')
+    name_without_epoch = '_'.join(temp[:-2])
+    
+    path2 = './Washed_Embed/Result_Embed/' + dataset + '/' + name_without_epoch+'/'
     category = pd.read_csv(path1 + 'category.csv', usecols=['geo_id', 'category'])
     inputs = torch.load(path2 + name + '.pt').to(device)
-    # inputs = torch.load(path1 + "poi_repr.pth").to(device)
+    
     num_loc = len(category)
     labels=category.category.to_numpy()
     indices = list(range(num_loc))
@@ -87,9 +91,14 @@ if __name__ == '__main__':
     score_log = []
 
     for i,(train_ind, valid_ind) in enumerate(skf.split(inputs,labels)):
-        for submodule in clf_model.children():
-            if type(submodule) is nn.Linear:
-                submodule.reset_parameters()
+
+        clf_model = nn.Sequential(
+            nn.Linear(embed_size, hidden_size),
+            nn.ReLU(),
+            nn.Linear(hidden_size, num_class)
+        ).to(device)
+        optimizer = torch.optim.Adam(clf_model.parameters(), lr=1e-4)
+
         for epoch in tqdm(range(task_epoch), desc=f'Fold {i}', total=task_epoch):
             for _, batch in enumerate(next_batch(train_ind, downstream_batch_size)):
                 batch_input = inputs[batch].clone()
@@ -136,7 +145,7 @@ if __name__ == '__main__':
     }, index=[1])
     
     import os
-    save_path = './Washed_Result_Metric/' + dataset + '/' + name +'/'
+    save_path = './Washed_Result_Metric/' + args.dataset + '/' + name +'/'
     if not os.path.exists(save_path):
             os.makedirs(save_path)
     result.to_csv(save_path + name + '.clf', index=False)

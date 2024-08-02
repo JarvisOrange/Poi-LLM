@@ -19,6 +19,7 @@ Washed_Feature/
 Washed_Model_state_dict_cache/
 Washed/
 Washed_Prompt/
+Washed_Result_Metric/
 
 Scripts/train.sh
 Scripts/simple_model_train.sh

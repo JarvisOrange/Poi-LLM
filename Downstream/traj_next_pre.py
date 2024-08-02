@@ -9,8 +9,8 @@ from numpy.random import shuffle
 from tqdm import tqdm
 
 embed_size = 256 # The size of poi embeddings. 128 or 256 in our exp.
-task_epoch = 100
-downstream_batch_size = 8
+task_epoch = 50
+downstream_batch_size = 32
 pre_model_seq2seq = True
 predict_len = 1
 test_ratio = 0.4
@@ -158,7 +158,12 @@ if __name__ == '__main__':
 
     path1 = './Washed/'+ args.POI_MODEL_NAME+'/'
 
-    path2 = './Washed_Embed/Result_Embed/' + dataset + '/'
+    temp = name.split('_')
+
+    name_without_epoch = '_'.join(temp[:-2])
+    
+    path2 = './Washed_Embed/Result_Embed/' + dataset + '/' + name_without_epoch +'/'
+
 
     
     #FIXME
@@ -222,28 +227,46 @@ if __name__ == '__main__':
                     print('Acc@1 %.6f, Acc@5 %.6f, F1-micro %.6f, F1-macro %.6f' % (
                     acc1, acc5, f1_micro, f1_macro))
                     best_acc1, best_acc5, best_f1_micro, best_f1_macro = np.max(score_log, axis=0)
-                
+        
+        if epoch % 5 == 0:
+            result = pd.DataFrame({
+                'name': args.NAME,
+                'accuracy1': best_acc1,
+                'accuracy5': best_acc5,
+                'f1-micro': best_f1_micro,
+                'f1-macro': best_f1_macro,
+                'epoch': epoch
+            }, index=[1])
+
+            
+            save_path = './Washed_Result_Metric/' + args.dataset + '/' + name +'/'
+            if not os.path.exists(save_path):
+                    os.makedirs(save_path)
+
+            result.to_csv(save_path + args.NAME + '.pre', index=False)
+                    
         print('epoch {} complete! avg loss:{}'.format(epoch,np.mean(losses)))
 
-    best_acc1, best_acc5, best_f1_micro, best_f1_macro = np.max(score_log, axis=0)
+    
     print('Finished Evaluation.')
     print(
         'Acc1 %.6f %%, Acc5 %.6f %%, F1-micro %.6f, F1-macro %.6f' % (
             best_acc1, best_acc5, best_f1_micro, best_f1_macro))
 
     
+
+
     result = pd.DataFrame({
         'name': args.NAME,
         'accuracy1': best_acc1,
         'accuracy5': best_acc5,
-        'f1-micro': best_f1_macro,
+        'f1-micro': best_f1_micro,
         'f1-macro': best_f1_macro,
     }, index=[1])
 
     import os
-    save_path = './Washed_Result_Metric/' + dataset + '/' + name +'/'
+    save_path = './Washed_Result_Metric/' + args.dataset + '/' + name +'/'
     if not os.path.exists(save_path):
             os.makedirs(save_path)
 
-    save_path = './Result_Metric/' + dataset + '/' + name + '.traj'
-    result.to_csv(save_path + + name + '.pre', index=False)
+    result.to_csv(save_path + name + '.pre', index=False)
