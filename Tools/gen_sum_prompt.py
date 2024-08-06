@@ -50,14 +50,6 @@ def create_args():
         help="which dataset",
     )
 
-    parser.add_argument(
-        "--Ablation",
-        type=int,
-        default=0,
-        choices=[0,1,2],
-    )
-
-
 
     args = parser.parse_args()
 
@@ -65,12 +57,10 @@ def create_args():
 
 
 
-def main(): 
+def generate(prompt_type): 
     args = create_args()
 
     
-    prompt_type = args.prompt_type
-
     dataset_name = args.dataset
 
     poi_data_path = "./Dataset/" + dataset_name+ '/' + dataset_name.lower() + '_geo.csv'
@@ -103,8 +93,6 @@ def main():
     
 
 
-    
-
     if prompt_type != 'address':
 
         poi_df = pd.merge(poi_df, poi_feature_df, left_on='poi_id', right_on='geo_id')
@@ -123,9 +111,7 @@ def main():
     prompt_result = []
 
 
-    prompt_base = "You are a local resident of " + dataset_city_dict[dataset_name] +" who is really familiar with the local POIs.\n"
-
-    prompt_base += "Basic Information: "
+    prompt_base = "Basic Information: "
 
 
     if prompt_type == 'address':
@@ -191,36 +177,14 @@ def main():
             if postcode !='':
                 prompt +=  " The postcode of the POI is " + postcode + "."
 
-            prompt += "\n"+"Question: Where is the POI in " + dataset_city_dict[dataset_name] +"?"
+    
             prompt_result.append(prompt)
+        return prompt_result
         
     elif prompt_type == 'time':
         for _, row in tqdm(poi_df.iterrows(), total=poi_df.shape[0]):
             prompt = ''
-            prompt += prompt_base 
-
-            name = ""
-            name_info = eval(row['osm_names'])
-            if "name:en" in name_info:
-                name = name_info['name:en']
-            elif "name" in name_info:
-                name = name_info['name']
-            if name !='':
-                prompt +=  "The name of this POI is " + name + ". "
-
-            temp = eval(row['coordinates'])
-            lon, lat = temp[0], temp[1]
-            if lat < 0:
-                lat = str(-lat) +" South"
-            else:
-                lat = str(lat) +" North"
-            if lon < 0:
-                lon = str(-lon) +" West"
-            else:
-                lon = str(lon) +" East"
-
-            prompt +=  "The latitude and longitude of the POI are "+ lat +" and " + lon + '.'
-
+    
 
             day = row['day_feature'] 
             hour = row['hour_feature']
@@ -230,8 +194,8 @@ def main():
                 prompt+= "\n"+"Time Information: People usually visit the POI " + time_dict[hour]+". "
                 prompt+= " And people usually come to the POI on " + day +'s.'
 
-            prompt += "\n"+"Question: When do people usually visit the POI in " + dataset_city_dict[dataset_name] +"?"
             prompt_result.append(prompt)
+        return prompt_result
 
             
             
@@ -241,30 +205,7 @@ def main():
         x = 0
         for _, row in tqdm(poi_df.iterrows(), total=poi_df.shape[0]):
             prompt = ''
-            prompt += prompt_base 
-
-            name = ""
-            name_info = eval(row['osm_names'])
-            if "name:en" in name_info:
-                name = name_info['name:en']
-            elif "name" in name_info:
-                name = name_info['name']
-            if name !='':
-                prompt +=  "The name of this POI is " + name + ". "
-
-            temp = eval(row['coordinates'])
-            lon, lat = temp[0], temp[1]
-            if lat < 0:
-                lat = str(-lat) +" South"
-            else:
-                lat = str(lat) +" North"
-            if lon < 0:
-                lon = str(-lon) +" West"
-            else:
-                lon = str(lon) +" East"
-
-            prompt +=  "The latitude and longitude of the POI are "+ lat +" and " + lon + '.'
-
+        
 
             # category = row['category']
             category_nearby = row['category_nearby']
@@ -284,17 +225,30 @@ def main():
                 prompt += " There are no other POIs near this POI."
                 
         
-            prompt += "\n"+"Question: What type of POI is the POI in " + dataset_city_dict[dataset_name] +"?"
             prompt_result.append(prompt)
-        print(x)
+        return prompt_result
 
-        
+   
     
-    save_data_path = "./Washed_Prompt/" + "" + dataset_name +"/"+ "prompt_" + dataset_name + "_" + prompt_type + '.csv'
-    save_prompt(prompt_result, save_data_path)
+    
 
             
             
         
 if __name__ == "__main__":
-    main()
+    prompts = []
+    prompt_result = []
+    dataset_name = 'NY'
+    prompt_base = "You are a local resident of " + dataset_city_dict[dataset_name] +" who is really familiar with the local POIs.\n"
+    q_temp = "Question: Where is the POI in " + dataset_city_dict[dataset_name] +"?"
+    for p in ['address','time','cat_nearby']:
+        prompts.append(generate(p))
+    for i in range(len(prompts[0])):
+        
+        temp = prompt_base  + prompts[0][i] + prompts[1][i] +  prompts[2][i] + '\n' + q_temp
+        prompt_result.append(temp)
+    save_data_path = "./Ablation_Prompt/" + "" + dataset_name +"/"+ "prompt_" + dataset_name + '_sum.csv'
+
+    
+    save_prompt(prompt_result, save_data_path)
+    

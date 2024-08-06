@@ -141,19 +141,25 @@ def simloss(embed_new, st_embed):
 
     
 
-def save_embed(Model, dataset, LLM, dim, poi_model, epoch, device, last=False):
+def save_embed(Model, dataset, LLM, dim, poi_model, epoch, device, train_split=False, ablation=0):
+    if ablation != 0:
+        name_embed = dataset + '_' + LLM + '_' + poi_model + '_'+ str(dim) + '_Epoch_' + str(epoch) +'_ablation' + str(ablation)+'.pt'
 
-    
-    if last:
-        name_embed = dataset + '_' + LLM + '_' + poi_model + '_'+ str(dim) + '_LAST.pt'
+        name_statedict = dataset + '_' + LLM + '_' + poi_model + '_'+ str(dim) +  '_Epoch_' +str(epoch) +'_ablation'+ str(ablation)+'.pt'
+    else:
+        if train_split:
+            name_embed = dataset + '_' + LLM + '_' + poi_model + '_'+ str(dim) + '_Epoch_' + str(epoch) +'_train.pt'
 
-        name_statedict = dataset + '_' + LLM + '_' + poi_model + '_'+ str(dim) + '_statedict_LAST.pt'
-    else: 
-        name_embed = dataset + '_' + LLM + '_' + poi_model + '_'+ str(dim) + '_Epoch_' + str(epoch) +'.pt'
-        
-        name_statedict = dataset + '_' + LLM + '_' + poi_model + '_'+ str(dim) +  '_Epoch_' +str(epoch) +'_statedict.pt'
+            name_statedict = dataset + '_' + LLM + '_' + poi_model + '_'+ str(dim) +  '_Epoch_' +str(epoch) +'_train.pt'
+        else: 
+            name_embed = dataset + '_' + LLM + '_' + poi_model + '_'+ str(dim) + '_Epoch_' + str(epoch) +'.pt'
+            
+            name_statedict = dataset + '_' + LLM + '_' + poi_model + '_'+ str(dim) +  '_Epoch_' +str(epoch) +'_statedict.pt'
     
-    embed_path = './Washed_Embed/Result_Embed/'+ dataset +'/' + dataset + '_' + LLM + '_' + poi_model + '_'+ str(dim) + '/'
+    if ablation != 0:
+        embed_path = './Washed_Embed/Ablation_Embed/'+ dataset +'/' + dataset + '_' + LLM + '_' + poi_model + '_'+ str(dim) + '/'
+    else:
+        embed_path = './Washed_Embed/Result_Embed/'+ dataset +'/' + dataset + '_' + LLM + '_' + poi_model + '_'+ str(dim) + '/'
 
     model_path =  "./Washed_Model_state_dict_cache/" + dataset  +'/'+ dataset + '_' + LLM + '_' + poi_model + '_'+ str(dim) + '/'
 

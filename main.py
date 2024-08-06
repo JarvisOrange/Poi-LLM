@@ -95,6 +95,12 @@ def create_args():
         default = 0
     )
 
+    parser.add_argument(
+        '--ablation',
+        type=int,
+        default = 0
+    )
+
     args = parser.parse_args()
 
     return args
@@ -107,8 +113,8 @@ def main():
     dataset = args.dataset
     dim = args.dim
     device = 'cuda:' +str(args.gpu)
-    if args.cpu == 1:
-        device = 'cpu'
+    
+    ablation = args.ablation
 
     LR = args.lr
     BATCH_SIZE = args.batch_size
@@ -117,7 +123,10 @@ def main():
 
     cross_layer_num = args.cross_layer_num
 
-    llm_embed_path = "./Washed_Embed/LLM_Embed/" + dataset 
+    if ablation == 1:
+        llm_embed_path = "./Washed_Embed/Ablation_Embed/" + dataset
+    else:
+        llm_embed_path = "./Washed_Embed/LLM_Embed/" + dataset
 
     poi_embed_path = "./Washed/"
 
@@ -137,138 +146,60 @@ def main():
 
 
     train_data_name = dataset+'_train.csv'
+    
+    train_dataset = ContrastDataset('./Washed_ContrastDataset/' + train_data_name, device, simple=args.simple_dataset)
+    train_dataloader = DataLoader(train_dataset, batch_size = BATCH_SIZE, shuffle=True)
 
 
-    ###### DDP #############
+    Model = PoiEnhancer(path_address, path_cat, path_visit, path4, cross_layer_num=cross_layer_num, dim=dim).to(device)
+    Model.train()
+    optimizer = torch.optim.AdamW(Model.parameters(), lr=LR, weight_decay=1e-3)
 
-    ddp = args.DDP
-    if ddp == 'True':
-        local_rank = args.local_rank
-        torch.cuda.set_device(local_rank)
-        dist.init_process_group(backend='nccl')
+    
+    nceloss = InfoNCE(temperature=0.1,reduction='mean',negative_mode='paired')
 
 
-        train_dataset = ContrastDataset('./Washed_ContrastDataset/' + train_data_name, device, simple=args.simple_dataset)
+    Model.train()
+    
+    for epoch in range(EPOCH):
+        l = []
+        for batch in tqdm(train_dataloader):
+            
+            z, y  = Model(batch)
 
-        train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
+            query, positive, negative = z[:,0,:], z[:,1,:], z[:,1:,:]
 
-        train_dataloader = DataLoader(train_dataset, batch_size = BATCH_SIZE, num_workers = 2, shuffle=True, sampler = train_sampler)
+            
+            query_ = query.squeeze(1)
+            positive_ = positive.squeeze(1)
 
-        Model = PoiEnhancer(path_address, path_cat, path_visit, path4, cross_layer_num=cross_layer_num, dim=dim).cuda(device)
+            z = rearrange(z, 'b n d -> (b n) d')
+            y = rearrange(y, 'b n d -> (b n) d')
 
-        Model = Model.to(local_rank)
-
-        Model = DDP(Model,  device_ids=[local_rank], output_device=local_rank)
-
-        optimizer = torch.optim.AdamW(Model.parameters(), lr=LR, weight_decay=1e-4)
-
-        nceloss = InfoNCE(temperature=0.1,reduction='mean',negative_mode='paired').to(local_rank)
-
-        Model.train()
-        
-        for epoch in range(EPOCH):
-            train_dataloader.sampler.set_epoch(epoch)
-
-            l = []
-
-            for batch in tqdm(train_dataloader):
-                
-                z, y  = Model(batch)
-
-                query, positive, negative = z[:,0,:], z[:,1,:], z[:,1:,:]
-
-                
-                query_ = query.squeeze(1)
-                positive_ = positive.squeeze(1)
-
-                z = rearrange(z, 'b n d -> (b n) d')
-                y = rearrange(y, 'b n d -> (b n) d')
-
-        
-                loss = nceloss(query_, positive_, negative) + simloss(z, y)
-
-                optimizer.zero_grad()
-
-                loss.backward()
-
-                optimizer.step()
-
-                l.append(loss.item())
-
-                
-            print('epoch %d, loss： %.4f' % (epoch+1,sum(l)/ len(l)))
-        
-
-            if (epoch+1) % SAVE_INTERVAL == 0:
-                Model.eval()
-                if dist.get_rank() == 0:
-                    save_embed(Model, dataset, LLM, dim, poi_model, epoch+1, device)
-                Model.train()
+    
+            loss = nceloss(query_, positive_, negative) + simloss(z, y)
 
             optimizer.zero_grad()
 
-            #########save embed ################
-        Model.eval()
-        if dist.get_rank() == 0:
-            save_embed(Model, dataset, LLM, dim, poi_model, epoch+1, device, last=True)
+            loss.backward()
 
-    ########################
-    else:
-        train_dataset = ContrastDataset('./Washed_ContrastDataset/' + train_data_name, device, simple=args.simple_dataset)
-        train_dataloader = DataLoader(train_dataset, batch_size = BATCH_SIZE, shuffle=True)
+            optimizer.step()
 
+            l.append(loss.item())
 
-        Model = PoiEnhancer(path_address, path_cat, path_visit, path4, cross_layer_num=cross_layer_num, dim=dim).to(device)
-        Model.train()
-        optimizer = torch.optim.AdamW(Model.parameters(), lr=LR, weight_decay=1e-3)
+            
+        print('epoch %d, loss： %.4f' % (epoch+1,sum(l)/ len(l)))
+    
 
+        if (epoch + 1) % SAVE_INTERVAL == 0:
+            Model.eval()
+            save_embed(Model, dataset, LLM, dim, poi_model, epoch+1, device, train_split=False, ablation=ablation)
+            Model.train()
 
-        
-        nceloss = InfoNCE(temperature=0.1,reduction='mean',negative_mode='paired')
+        optimizer.zero_grad()
 
+        #########save embed ################
 
-        Model.train()
-        
-        for epoch in range(EPOCH):
-            l = []
-            for batch in tqdm(train_dataloader):
-                
-                z, y  = Model(batch)
-
-                query, positive, negative = z[:,0,:], z[:,1,:], z[:,1:,:]
-
-                
-                query_ = query.squeeze(1)
-                positive_ = positive.squeeze(1)
-
-                z = rearrange(z, 'b n d -> (b n) d')
-                y = rearrange(y, 'b n d -> (b n) d')
-
-        
-                loss = nceloss(query_, positive_, negative) + simloss(z, y)
-
-                optimizer.zero_grad()
-
-                loss.backward()
-
-                optimizer.step()
-
-                l.append(loss.item())
-
-                
-            print('epoch %d, loss： %.4f' % (epoch+1,sum(l)/ len(l)))
-        
-
-            if (epoch + 1) % SAVE_INTERVAL == 0:
-                Model.eval()
-                save_embed(Model, dataset, LLM, dim, poi_model, epoch+1, device)
-                Model.train()
-
-            optimizer.zero_grad()
-
-            #########save embed ################
-        Model.eval()
-        save_embed(Model, dataset, LLM, dim, poi_model, epoch+1, device, last=True)
 
 
 

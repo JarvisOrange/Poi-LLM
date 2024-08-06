@@ -24,9 +24,12 @@ def gen_contrast_train_data(positive, all, negative_num = 6):
 
 def process_contrast_data(dataset_name='NY'):
     data_path = dataset_path_dict[dataset_name]
-    geo_positive = pd.read_csv(data_path + dataset_name + "_geo_positive.csv", sep=',', header=0)
+    # geo_positive = pd.read_csv(data_path + dataset_name + "_geo_positive_ablation3.csv", sep=',', header=0)
     seq_positive = pd.read_csv(data_path + dataset_name + "_seq_positive.csv", sep=',', header=0)
+    seq_positive = pd.read_csv(data_path + dataset_name + "_seq_positive_train.csv", sep=',', header=0)
     time_cat_positive = pd.read_csv(data_path + dataset_name + "_time_cat_positive.csv", sep=',', header=0)
+
+    positive_df = geo_positive
 
     positive_df = pd.merge(geo_positive,time_cat_positive,on='geo_id', how='outer')
     positive_df = pd.merge(positive_df,seq_positive,on='geo_id', how='outer')
@@ -42,10 +45,11 @@ def process_contrast_data(dataset_name='NY'):
     positive_df['time_cat_positive'] = positive_df['time_cat_positive'].apply(lambda x: eval(x))
     
     positive_df['positive'] = positive_df['geo_positive'] + positive_df['seq_positive'] + positive_df['time_cat_positive']
-
+    # positive_df['positive'] = positive_df['geo_positive']
     positive_df['positive'] = positive_df['positive'].apply(lambda x: list(set(x)))
 
     positive_df = positive_df.drop(['geo_positive','seq_positive','time_cat_positive'], axis = 1)
+    # positive_df = positive_df.drop(['geo_positive'], axis = 1)
 
 
     # genernate negative

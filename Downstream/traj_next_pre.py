@@ -9,15 +9,15 @@ from numpy.random import shuffle
 from tqdm import tqdm
 
 embed_size = 256 # The size of poi embeddings. 128 or 256 in our exp.
-task_epoch = 50
 downstream_batch_size = 32
 pre_model_seq2seq = True
 predict_len = 1
-test_ratio = 0.4
+test_ratio = 0.2
 
 import argparse
 import os
 os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
+
 
 
 def create_args():
@@ -49,6 +49,11 @@ def create_args():
         help="Result save path",
     )
     
+    parser.add_argument(
+        "--epoch",
+        type=int,
+        default=100,
+    )
     
     args = parser.parse_args()
 
@@ -156,6 +161,8 @@ if __name__ == '__main__':
 
     dataset = args.dataset
 
+    task_epoch = args.epoch
+
     path1 = './Washed/'+ args.POI_MODEL_NAME+'/'
 
     temp = name.split('_')
@@ -170,6 +177,8 @@ if __name__ == '__main__':
     category = pd.read_csv(path1+'category.csv', usecols=['geo_id'])
     
     traj_set = torch.load(path1+'traj_set.pth')
+
+    test_set = torch.load()
 
 
     poi_embedding = torch.load(path2 + name +'.pt').to(device)

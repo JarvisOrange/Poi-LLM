@@ -205,7 +205,7 @@ class CrossAttentionTransformer(nn.Module):
 
         out = self.to_out(out)
 
-        out = self.norm1(y + out)
+        out = y + self.norm1(out)
 
         out1 = self.feedforward2(self.activation(self.feedforward1(out)))
 
@@ -214,6 +214,70 @@ class CrossAttentionTransformer(nn.Module):
         out = self.norm2(out)
 
         return out
+
+class SelfAttentionBlock(nn.Module):
+    def __init__(self, 
+                 dim,
+                 dim_head=32, 
+                 heads=8, 
+                 ):
+        super().__init__()
+        self.heads = heads
+        self.scale = dim_head ** -0.5
+        inner_dim = heads * dim_head
+       
+        self.norm1 = LayerNorm(dim)
+        self.norm2 = LayerNorm(dim)
+
+
+        self.to_q = nn.Linear(dim, inner_dim, bias=False)
+        self.to_k = nn.Linear(dim, inner_dim, bias=False)
+        self.to_v = nn.Linear(dim, inner_dim, bias=False)
+        
+        self.to_out = nn.Linear(dim * heads, dim, bias=False)
+
+
+        self.feedforward1 = nn.Linear(dim, dim * 2, bias=False)
+        self.feedforward2 = nn.Linear(dim * 2, dim, bias=False)
+
+        self.activation = F.relu
+
+       
+
+    def forward(self, x):
+        """ 
+        x fused into y
+        """
+        
+        q = self.to_q(x)
+        k = self.to_k(x)
+        v = self.to_v(x)
+
+        q = rearrange(q, 'b n (h d) -> b h n d', h = self.heads)
+
+        k = rearrange(k, 'b n (h d) -> b h n d', h = self.heads)
+
+        attn = einsum('b h i d, b h j d -> b h i j', q, k)
+
+        attn = attn * self.scale
+
+        attn = nn.Softmax(dim= -1)(attn)
+
+        out = einsum('b h i j, b j d -> b h i d', attn, v)
+
+        out = rearrange(out, 'b h n d -> b n (h d)')
+
+        out = self.to_out(out) + x
+
+        out = self.norm1(out)
+
+        out = self.feedforward2(self.activation(self.feedforward1(out)))
+
+        out = self.norm2(out)
+
+        return out
+
+
     
     
 

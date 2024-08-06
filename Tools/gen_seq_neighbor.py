@@ -15,11 +15,18 @@ import random
 from random import choice
 import os
 
+# dataset_path_dict = {
+#     'NY':'./Dataset/NY/ny_ttraj.csv',
+#     'SG':'./Dataset/SG/sg_traj.csv',
+#     'TKY':'./Dataset/TKY/tky_traj.csv',
+# }
+
 dataset_path_dict = {
-    'NY':'./Dataset/NY/ny_traj.csv',
+    'NY':'./Washed/common/ny_train_traj.csv',
     'SG':'./Dataset/SG/sg_traj.csv',
     'TKY':'./Dataset/TKY/tky_traj.csv',
 }
+
 
 monthdict={
     'Jan':1,
@@ -36,18 +43,24 @@ monthdict={
     'Dec':12
 }
 
+# def get_day(time):
+#     if '-' in time:
+#         date = time.split("T")[0]
+#         time = datetime.strptime(date,"%Y-%m-%d")
+#         return (int(time.year), int(time.month), int(time.day))
+#     else:
+#         temp = time.split(" ")
+#         date = monthdict[temp[1]] * 100 + int(temp[2])
+#         year = int(temp[-1])
+#         month = int(monthdict[temp[1]])
+#         day = int(temp[2])
+#         return (year, month, day)
+    
 def get_day(time):
-    if '-' in time:
-        date = time.split("T")[0]
-        time = datetime.strptime(date,"%Y-%m-%d")
-        return (int(time.year), int(time.month), int(time.day))
-    else:
-        temp = time.split(" ")
-        date = monthdict[temp[1]] * 100 + int(temp[2])
-        year = int(temp[-1])
-        month = int(monthdict[temp[1]])
-        day = int(temp[2])
-        return (year, month, day)
+    date = time.split(" ")[0]
+    time = datetime.strptime(date,"%Y-%m-%d")
+    return (int(time.year), int(time.month), int(time.day))
+   
         
 
 def gen_seq_neighbor(dataset_name, window=2,   save_path="./Washed_ContrastDataset/"):
@@ -55,11 +68,13 @@ def gen_seq_neighbor(dataset_name, window=2,   save_path="./Washed_ContrastDatas
 
     poi_df = pd.read_csv(data_path, sep=',', header=0)
 
-    columns_standard = ["index","entity_id","location","time","type","dyna_id"]
+    # columns_standard = ["index","entity_id","location","time","type","dyna_id"]
+    columns_standard = ["index","entity_id","location","time","dyna_id"]
     if dataset_name != 'TKY':
         poi_df.columns = columns_standard
     else:
-        poi_df.columns = ["index","dyna_id","type","time","entity_id","location"]
+        # poi_df.columns = ["index","dyna_id","type","time","entity_id","location"]
+        poi_df.columns = ["index","dyna_id","time","entity_id","location"]
         poi_df = poi_df.loc[:, columns_standard]
 
     
@@ -78,7 +93,8 @@ def gen_seq_neighbor(dataset_name, window=2,   save_path="./Washed_ContrastDatas
         
         for i in range(length):
             poi_id = traj.iloc[i, 2] #location id
-            poi_day = traj.iloc[i, 6] #day time
+            # poi_day = traj.iloc[i, 6] #day time
+            poi_day = traj.iloc[i, 3] #day time
             temp= traj.iloc[max(0,i - window): min(length,i + window + 1), :]
             temp = temp[(temp['day'] == poi_day) & (temp['location'] != poi_id)]
             if len(temp) != 0:
@@ -98,11 +114,12 @@ def gen_seq_neighbor(dataset_name, window=2,   save_path="./Washed_ContrastDatas
     save_path = save_path +'/'+ dataset_name +'/'
     if not os.path.exists(save_path):
             os.makedirs(save_path)
-    name =  dataset_name + "_seq_positive.csv"
+    # name =  dataset_name + "_seq_positive_train.csv"
+    name =  dataset_name + "_seq_positive_train.csv"
 
     seq_neighbor_df.to_csv(save_path + name, sep=',', index=False, header=True)
 
 
     
-for dataset in ['TKY','NY','SG']:   
+for dataset in ['NY']:   
     gen_seq_neighbor(dataset)  

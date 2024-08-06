@@ -1,17 +1,11 @@
 #!/bin/bash
 
-n="TKY_llama2_hier_256_Epoch_50"
-pn='hier_256_tky'
-dataset='TKY'
-gpu=0
+n="NY_llama2_poi2vec_256_Epoch_50"
+pn='poi2vec_256_ny'
+dataset='NY'
+gpu=1
 
 echo $n
-
-# python Downstream/poi_clf.py    --gpu $gpu --NAME $n --dataset $dataset --POI_MODEL_NAME $pn
-
-# echo $n
-
-# echo "----------- task 1 done -----------"
 
 # python Downstream/poi_cluster.py    --gpu $gpu --NAME $n --dataset $dataset --POI_MODEL_NAME $pn
 
@@ -33,9 +27,7 @@ echo $n
 
 # echo "----------- task 4 done -----------"
 
-#              
-
-python Downstream/traj_next_pre.py    --gpu $gpu --NAME $n --dataset $dataset --POI_MODEL_NAME $pn --epoch 50
+python Downstream/traj_next_pre.py    --gpu $gpu --NAME $n --dataset $dataset --POI_MODEL_NAME $pn
 
 echo $n
 

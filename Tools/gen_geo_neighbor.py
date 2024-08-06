@@ -42,6 +42,12 @@ def get_geo_cat_neighbor(poi_list, poi_id, cat, minlon, maxlon, minlat, maxlat):
                                (poi_list['lat'] < maxlat) &
                                (poi_list['category'] == cat)
                                ]
+    # poi_geo_cat_neighbor = poi_list[(poi_list['geo_id'] !=poi_id) &
+    #                            (poi_list['lon'] > minlon) & 
+    #                            (poi_list['lon'] < maxlon) & 
+    #                            (poi_list['lat'] > minlat) & 
+    #                            (poi_list['lat'] < maxlat) 
+    #                            ]
     return poi_geo_cat_neighbor
 
 
@@ -95,7 +101,7 @@ def gen_poi_geoneighbor(dataset_name,  save_path="./Washed_ContrastDataset/"):
         
       
         
-for dataset in ['TKY','NY','SG']:   
+for dataset in ['NY']:   
     gen_poi_geoneighbor(dataset)  
 
     

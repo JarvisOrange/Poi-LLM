@@ -1,9 +1,9 @@
 #!/bin/bash
 
-n="TKY_llama2_hier_256_Epoch_50"
-pn='hier_256_tky'
-dataset='TKY'
-gpu=0
+n="SG_llama2_hier_256_Epoch_50"
+pn='hier_256_sg'
+dataset='SG'
+gpu=3
 
 echo $n
 
@@ -33,9 +33,7 @@ echo $n
 
 # echo "----------- task 4 done -----------"
 
-#              
-
-python Downstream/traj_next_pre.py    --gpu $gpu --NAME $n --dataset $dataset --POI_MODEL_NAME $pn --epoch 50
+python Downstream/traj_next_pre.py    --gpu $gpu --NAME $n --dataset $dataset --POI_MODEL_NAME $pn --epoch 100
 
 echo $n
 

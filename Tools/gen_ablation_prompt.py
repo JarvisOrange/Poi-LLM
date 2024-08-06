@@ -54,7 +54,7 @@ def create_args():
         "--Ablation",
         type=int,
         default=0,
-        choices=[0,1,2],
+        choices=[0],
     )
 
 
@@ -68,6 +68,7 @@ def create_args():
 def main(): 
     args = create_args()
 
+    ablation = args.Ablation
     
     prompt_type = args.prompt_type
 
@@ -100,8 +101,6 @@ def main():
 
     poi_feature_df = pd.read_csv(feature_data_path, sep=',', header=0, dtype={'osm_calculated_postcode':str})
 
-    
-
 
     
 
@@ -116,16 +115,16 @@ def main():
 
         poi_df = pd.merge(poi_df, poi_feature_df, left_on='geo_origin_id', right_on='geo_id')
 
-    
-
     poi_df=poi_df.fillna("")
    
     prompt_result = []
 
+    if ablation == 0:
+        prompt_base = ''
+    else:
+        prompt_base = "You are a local resident of " + dataset_city_dict[dataset_name] +" who is really familiar with the local POIs.\n"
 
-    prompt_base = "You are a local resident of " + dataset_city_dict[dataset_name] +" who is really familiar with the local POIs.\n"
-
-    prompt_base += "Basic Information: "
+        prompt_base += "Basic Information: "
 
 
     if prompt_type == 'address':
@@ -156,7 +155,7 @@ def main():
 
             prompt +=  "The latitude and longitude of the POI are "+ lat +" and " + lon + '.'
 
-            prompt += "\n" + "Address Information:"
+            prompt += "\n" + ("Address Information:" if ablation != 0  else '')
 
         
             housenumber = row['housenumber']
@@ -191,7 +190,10 @@ def main():
             if postcode !='':
                 prompt +=  " The postcode of the POI is " + postcode + "."
 
-            prompt += "\n"+"Question: Where is the POI in " + dataset_city_dict[dataset_name] +"?"
+            q_temp = "Question: Where is the POI in " + dataset_city_dict[dataset_name] +"?"
+            
+            prompt += q_temp if ablation != 0  else ''
+
             prompt_result.append(prompt)
         
     elif prompt_type == 'time':
@@ -225,12 +227,17 @@ def main():
             day = row['day_feature'] 
             hour = row['hour_feature']
             if day == "" or hour == "":
-                prompt+= "\n"+"Check-in Time Information: The POI has no user check-in record. "
+                prompt+= "\n"+('Checkin Time Information: ' if ablation != 0  else '')+"The POI has no user check-in record. "
             else:
-                prompt+= "\n"+"Time Information: People usually visit the POI " + time_dict[hour]+". "
+                prompt+= "\n"+('Time Information:' if ablation != 0  else '')+"People usually visit the POI " + time_dict[hour]+". "
                 prompt+= " And people usually come to the POI on " + day +'s.'
 
-            prompt += "\n"+"Question: When do people usually visit the POI in " + dataset_city_dict[dataset_name] +"?"
+
+            t_temp = "Question: When do people usually visit the POI in " + dataset_city_dict[dataset_name] +"?"
+            
+            prompt += t_temp if ablation != 0  else ''
+
+
             prompt_result.append(prompt)
 
             
@@ -269,7 +276,7 @@ def main():
             # category = row['category']
             category_nearby = row['category_nearby']
 
-            prompt += "\n"+"Surrounding Information:" 
+            prompt += "\n"+("Surrounding Information:" if ablation != 0  else '') 
 
             if category_nearby != " ":   
                 x += 1
@@ -282,15 +289,20 @@ def main():
                     prompt += " There are " + temp[0] + ', ' + temp[1] + ' and ' + temp[2] + " near the POI."
             else:
                 prompt += " There are no other POIs near this POI."
+
+            c_temp = "Question: What type of POI is the POI in " + dataset_city_dict[dataset_name] +"?"
+            
+            prompt += c_temp if ablation != 0  else ''
                 
-        
-            prompt += "\n"+"Question: What type of POI is the POI in " + dataset_city_dict[dataset_name] +"?"
+    
             prompt_result.append(prompt)
-        print(x)
+
+
+        
 
         
     
-    save_data_path = "./Washed_Prompt/" + "" + dataset_name +"/"+ "prompt_" + dataset_name + "_" + prompt_type + '.csv'
+    save_data_path = "./Ablation_Prompt/" + "" + dataset_name +"/"+ "prompt_" + dataset_name + "_" + prompt_type + '.csv'
     save_prompt(prompt_result, save_data_path)
 
             

@@ -174,9 +174,7 @@ if __name__ == '__main__':
     poi_model_name = args.POI_MODEL_NAME
     device = torch.device("cuda:"+str(args.gpu) if torch.cuda.is_available() else "cpu")
 
-    temp = name.split('_')
-    name_without_epoch = '_'.join(temp[:-2])
-    embedding = torch.load('Washed_Embed/Result_Embed/{}/{}/{}.pt'.format(dataset,name_without_epoch, name)).to(device)
+    embedding = torch.load('Washed/poi2vec_256_ny/poi_repr.pth').to(device)
     dataset = torch.load('Washed/common/{}_flow.pth'.format(dataset.lower()))
     batch_size = 128
 
@@ -192,11 +190,9 @@ if __name__ == '__main__':
     print(f'Best epoch: MAE: {best_mae:.4f}, RMSE: {best_rmse:.4f}, MAPE: {best_mape:.4f}')
 
     import os
-    save_path = './Washed_Result_Metric/' + args.dataset + '/' + name +'/'
-    if not os.path.exists(save_path):
-            os.makedirs(save_path)
+
     pd.DataFrame({
         'mae': best_mae,
         'mape': best_mape,
         'rmse': best_rmse
-    }, index=[1]).to_csv(save_path + name + '.flow')
+    }, index=[1]).to_csv('temp.flow')

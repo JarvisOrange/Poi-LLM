@@ -43,7 +43,7 @@ def create_args():
         "--prompt_type",
         type=str,
         default="time",
-        choices=['address', 'time','cat_nearby'],
+        choices=['address', 'time','cat_nearby','sum'],
     )
 
     args = parser.parse_args()
@@ -73,7 +73,7 @@ def main():
     
     model = model.eval()
 
-    prompt_data_path = "./Washed_Prompt/" + "" + args.dataset +"/"+ "prompt_" + args.dataset + "_" + args.prompt_type + '.csv'
+    prompt_data_path = "./Ablation_Prompt/" + "" + args.dataset +"/"+ "prompt_" + args.dataset + "_" + args.prompt_type + '.csv'
 
 
     prompt_df = pd.read_csv(prompt_data_path, header=0)
@@ -121,7 +121,6 @@ def main():
             torch.argmax(batch_mask.flip(dims=[1]), dim=1)
 
         
-
         d_act = batch_activations.shape[2]
         expanded_mask = last_entity_token.unsqueeze(-1).expand(-1, d_act)
         
@@ -194,7 +193,7 @@ def main():
 
     last_layer_activation = layer_activations[last_layer_id]
         
-    save_path = "./Washed_Embed/LLM_Embed/" + "" + args.dataset +"/"    
+    save_path = "./Washed_Embed/Ablation_Embed/" + "" + args.dataset +"/"    
     save_name = f'{args.dataset}_{args.LLM}_{args.prompt_type}_LAST.pt'
 
     if not os.path.exists(save_path):
